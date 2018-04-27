@@ -219,7 +219,7 @@ def gen():
 def index():
     return '''<!DOCTYPE HTML><html><body>
         <form action="/gen" method="post">
-        <p>Characters: <input type="text" name="chars" value="你好"/></p>
+        <p>Characters: <input type="text" name="chars" value="你好吗"/></p>
         <p>Size: <input type="text" name="size" value="10"/></p>
         <input type="submit">
     </form>'''
