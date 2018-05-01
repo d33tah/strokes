@@ -6,15 +6,20 @@ Chinese character, when printed.
 
 Requires inkscape, ghostscript and texlive-extra-utils packages installed.
 
-Also requires downloading the following file:
+Also requires downloading the following files:
 
     https://raw.githubusercontent.com/skishore/makemeahanzi/master/graphics.txt
+    https://raw.githubusercontent.com/skishore/makemeahanzi/master/dictionary.txt
 
 TODO:
 
-    * add print margins
-    * optimize output size - right now it's huge (18mb per file)!
-    * add some missing strokes to increase the difficulty
+    * add print margins?
+    * more options: how many repetitions of each stroke, how many characters does
+      it take to switch to random mode?
+    * multi-page support
+    * repetition mode: show two strokes at once?
+    * make frontend cuter
+    * custom titles
 
 ------------------------------------------------------------------------------
 '''
