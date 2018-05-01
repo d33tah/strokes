@@ -4,9 +4,9 @@
 Generates a file that can be used for learning how to write a specific
 Chinese character, when printed.
 
-Requires inkscape, ghostscript and texlive-extra-utils packages installed.
+For a description of the deployment, look at the Dockerfile.
 
-Also requires downloading the following files:
+Requires downloading the following files:
 
     https://raw.githubusercontent.com/skishore/makemeahanzi/master/graphics.txt
     https://raw.githubusercontent.com/skishore/makemeahanzi/master/dictionary.txt
