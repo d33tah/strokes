@@ -14,8 +14,8 @@ Requires downloading the following files:
 TODO:
 
     * add print margins?
-    * more options: how many repetitions of each stroke, how many characters does
-      it take to switch to random mode?
+    * more options: how many repetitions of each stroke, how many characters
+      does it take to switch to random mode?
     * multi-page support
     * repetition mode: show two strokes at once?
     * make frontend cuter
@@ -37,8 +37,14 @@ import asyncio
 
 from pyppeteer import launch
 from flask import Flask, Response, request
-import flask_testing
-import requests  # for testing
+
+# those imports are for testing purposes:
+import unittest
+import multiprocessing
+import time
+import hashlib
+import requests
+
 app = Flask(__name__)
 
 
@@ -79,6 +85,13 @@ FOOTER = '''
     </g>
 </svg>
 '''
+
+
+def random_string():
+    return hashlib.md5(str(time.time()).encode('utf8')).hexdigest()
+
+
+SHUTDOWN_CODE = random_string()
 
 
 def load_strokes_db(graphics_txt_path):
@@ -227,6 +240,14 @@ def gen():
         return Response(f.read(), mimetype='application/pdf')
 
 
+# this is for testing purposes only - we need a way to turn off the server
+# once tests are done
+@app.route('/' + SHUTDOWN_CODE, methods=['POST'])
+def shutdown():
+    request.environ.get('werkzeug.server.shutdown')()
+    return 'Server shutting down...'
+
+
 @app.route('/')
 def index():
     return '''<!DOCTYPE HTML><html><body>
@@ -237,11 +258,20 @@ def index():
     </form>'''
 
 
-class SystemTest(flask_testing.LiveServerTestCase):
+class SystemTest(unittest.TestCase):
 
-    def create_app(self):
-        app.config['LIVESERVER_TIMEOUT'] = 10
-        return app
+    def setUp(self):
+        self.server_thread = multiprocessing.Process(target=lambda: app.run())
+        self.server_thread.start()
+        time.sleep(1.0)
+
+    def tearDown(self):
+        requests.post(self.get_server_url() + '/' + SHUTDOWN_CODE, {})
+        self.server_thread.terminate()
+        self.server_thread.join()
+
+    def get_server_url(self):
+        return 'http://localhost:5000'
 
     def test_server_is_up_and_running(self):
         response = requests.get(self.get_server_url())

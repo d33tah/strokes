@@ -47,9 +47,9 @@ RUN wget -nv https://github.com/skishore/makemeahanzi/blob/master/dictionary.txt
 
 ADD ./requirements.txt /tmp
 RUN pip3 install -r /tmp/requirements.txt && rm /tmp/requirements.txt
-ADD ./strokes.py /usr/bin/strokes.py
-RUN chmod +x /usr/bin/strokes.py
+ADD ./strokes.py /tmp/strokes.py
+RUN chmod +x /tmp/strokes.py
 
 USER chrome
 WORKDIR /tmp
-CMD FLASK_APP=/usr/bin/strokes.py flask run -h 0.0.0.0
+CMD FLASK_APP=/tmp/strokes.py flask run -h 0.0.0.0
