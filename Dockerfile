@@ -42,7 +42,8 @@ RUN wget -nv https://github.com/skishore/makemeahanzi/blob/master/dictionary.txt
 
 ADD ./requirements.txt /tmp
 RUN pip3 install -r /tmp/requirements.txt && rm /tmp/requirements.txt
-ADD ./strokes.py /tmp/strokes.py
+ADD ./strokes.py /tmp/
+ADD ./strokes_backend.py /tmp/
 RUN chmod +x /tmp/strokes.py
 
 USER chrome
