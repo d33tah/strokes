@@ -1,8 +1,3 @@
-# Docker recipe for Strokes. Note that Chrome needs CAP_SYS_ADMIN, so you
-# might to want to run the thing like this:
-#
-# docker run -d --name d33tah-strokes --cap-add=SYS_ADMIN --restart=unless-stopped -p 5000:5000 -ti d33tah/strokes
-
 FROM ubuntu:18.04
 
 ###########################################################################
@@ -52,4 +47,5 @@ RUN chmod +x /tmp/strokes.py
 
 USER chrome
 WORKDIR /tmp
+RUN nosetests strokes.py
 CMD FLASK_APP=/tmp/strokes.py flask run -h 0.0.0.0

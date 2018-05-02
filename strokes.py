@@ -22,7 +22,6 @@ TODO:
     * custom titles
     * switch to quart
     * move all initialization outside of the hot loop
-    * add at least one integration test
 
 ------------------------------------------------------------------------------
 '''
@@ -41,6 +40,7 @@ from flask import Flask, Response, request
 # those imports are for testing purposes:
 import unittest
 import multiprocessing
+import threading
 import time
 import hashlib
 import requests
@@ -172,7 +172,13 @@ def gen_svg(C, strokes_db, size, fi):
 
 
 async def gen_pdf(infile, outfile):
-    browser = await launch()
+    # this lets us work without CAP_SYS_ADMIN:
+    options = {'args': ['--no-sandbox']}
+    # HACK: we're disabling signals because they fail in system tests
+    if threading.currentThread() != threading._main_thread:
+        options.update({'handleSIGINT': False, 'handleSIGHUP': False,
+                        'handleSIGTERM': False})
+    browser = await launch(**options)
     page = await browser.newPage()
     await page.goto('file://%s' % infile)
     await page.pdf({'path': outfile})
@@ -233,7 +239,7 @@ def gen():
     logger = logging.getLogger('strokes')
     size = int(request.form.get('size') or 10)
     C = request.form.get('chars') or 'X'
-    asyncio.get_event_loop().run_until_complete(main(
+    asyncio.new_event_loop().run_until_complete(main(
         logger, C, size, False, False, 'graphics.txt'
     ))
     with open(C + '.pdf', 'rb') as f:
@@ -252,7 +258,7 @@ def shutdown():
 def index():
     return '''<!DOCTYPE HTML><html><body>
         <form action="/gen" method="post">
-        <p>Characters: <input type="text" name="chars" value="你好吗"/></p>
+        <p>Characters: <input type="text" name="chars" value="你好"/></p>
         <p>Size: <input type="text" name="size" value="10"/></p>
         <input type="submit">
     </form>'''
