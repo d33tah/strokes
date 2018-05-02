@@ -20,7 +20,6 @@ TODO:
     * repetition mode: show two strokes at once?
     * make frontend cuter
     * custom titles
-    * switch to quart
     * move all initialization outside of the hot loop
 
 ------------------------------------------------------------------------------
