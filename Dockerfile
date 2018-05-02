@@ -4,21 +4,19 @@
 # docker run -d --name d33tah-strokes --cap-add=SYS_ADMIN --restart=unless-stopped -p 5000:5000 -ti d33tah/strokes
 
 FROM ubuntu:18.04
-RUN apt-get update && apt-get install -y python3-pip locales wget
 
-# we need to be able to read argv in UTF8 - in order to do that, we need
-# utf8 locale
-RUN locale-gen en_US.UTF-8
-ENV LC_ALL=en_US.UTF-8
+###########################################################################
+#
+# pyppeteer + Chrome installation
+#
+###########################################################################
 
-RUN pip3 install pyppeteer flask
+RUN apt-get update && apt-get install -y python3-pip
 
-RUN wget -nv https://github.com/skishore/makemeahanzi/blob/master/graphics.txt?raw=true -O/tmp/graphics.txt
-RUN wget -nv https://github.com/skishore/makemeahanzi/blob/master/dictionary.txt?raw=true -O/tmp/dictionary.txt
+RUN pip3 install pyppeteer
 
-# Those are Chrome's dependencies
-RUN apt-get install -y libasound2 libatk-bridge2.0-0 libatk1.0-0 libc6 \
-    libcairo2 libcups2 libdbus-1-3 libexpat1 libgcc1 libgdk-pixbuf2.0-0 \
+RUN apt update && apt install -y libasound2 libatk-bridge2.0-0 libatk1.0-0 \
+    libc6 libcairo2 libcups2 libdbus-1-3 libexpat1 libgcc1 libgdk-pixbuf2.0-0 \
     libglib2.0-0 libgtk-3-0 libnspr4 libnss3 libpango-1.0-0 \
     libpangocairo-1.0-0 libx11-6 libx11-xcb1 libxcb1 libxcomposite1 \
     libxcursor1 libxdamage1 libxext6 libxfixes3 libxi6 libxrandr2 \
@@ -27,15 +25,31 @@ RUN apt-get install -y libasound2 libatk-bridge2.0-0 libatk1.0-0 libc6 \
 RUN groupadd chrome && useradd -g chrome -s /bin/bash -G audio,video chrome \
     && mkdir -p /home/chrome && chown -R chrome:chrome /home/chrome
 
+RUN apt-get update && apt-get install -y fonts-noto-cjk locales wget
+
 USER chrome
-
 RUN python3 -c '__import__("pyppeteer.chromium_downloader").chromium_downloader.download_chromium()'
-
 USER root
+
+###########################################################################
+#
+# End of pyppeteer + Chrome installation
+#
+###########################################################################
+
+# we need to be able to read argv in UTF8 - in order to do that, we need
+# utf8 locale
+RUN locale-gen en_US.UTF-8
+ENV LC_ALL=en_US.UTF-8
+
+RUN wget -nv https://github.com/skishore/makemeahanzi/blob/master/graphics.txt?raw=true -O/tmp/graphics.txt
+RUN wget -nv https://github.com/skishore/makemeahanzi/blob/master/dictionary.txt?raw=true -O/tmp/dictionary.txt
+
+ADD ./requirements.txt /tmp
+RUN pip3 install -r /tmp/requirements.txt && rm /tmp/requirements.txt
 ADD ./strokes.py /usr/bin/strokes.py
 RUN chmod +x /usr/bin/strokes.py
-RUN apt-get update && apt-get install -y fonts-noto-cjk
-USER chrome
 
+USER chrome
 WORKDIR /tmp
 CMD FLASK_APP=/usr/bin/strokes.py flask run -h 0.0.0.0

@@ -30,7 +30,6 @@ TODO:
 import argparse
 import json
 import os
-import sys
 import logging
 import random
 import asyncio
@@ -38,6 +37,8 @@ import asyncio
 
 from pyppeteer import launch
 from flask import Flask, Response, request
+import flask_testing
+import requests  # for testing
 app = Flask(__name__)
 
 
@@ -81,7 +82,7 @@ FOOTER = '''
 
 
 def load_strokes_db(graphics_txt_path):
-    with open(graphics_txt_path, 'rU', encoding='utf8') as f:
+    with open(graphics_txt_path, 'r', encoding='utf8') as f:
         t = f.read()
     ret = {
         x['character']: x['strokes']
@@ -114,7 +115,7 @@ def get_image(C, img_num, images, strokes, skip_strokes, stop_at, add_text=''):
 
 def load_dictionary():
     d = {}
-    with open('dictionary.txt', 'rU') as f:
+    with open('dictionary.txt', 'r') as f:
         for line in f:
             j = json.loads(line)
             if j['pinyin']:
@@ -169,7 +170,6 @@ async def main(logger, C, size, no_delete, no_pdf, graphics_txt_path):
 
     logger.info('Loading strokes_db...')
     strokes_db = load_strokes_db(graphics_txt_path)
-    #strokes = strokes_db[C]
 
     logger.info('Generating SVG...')
     svg_path = C + '.svg'
@@ -179,7 +179,8 @@ async def main(logger, C, size, no_delete, no_pdf, graphics_txt_path):
     if no_pdf:
         return
 
-    await gen_pdf(os.getcwd() + '/' + C + '.svg', os.getcwd() + '/' + C + '.pdf')
+    base_path = os.getcwd() + '/' + C
+    await gen_pdf(base_path + '.svg', base_path + '.pdf')
 
     if no_delete:
         return
@@ -201,13 +202,15 @@ def parse_argv():
     parser.add_argument('--size', default=13)
 
     parser.add_argument('--graphics-txt-path', default='graphics.txt',
-        help='path to skisore\'s makemeahanzi/graphics.txt file')
+                        help='path to skisore\'s makemeahanzi/graphics.txt'
+                        ' file')
 
     parser.add_argument('--no-delete', action='store_true', default=False,
-        help='don\'t delete temporary files')
+                        help='don\'t delete temporary files')
 
     parser.add_argument('--no-pdf', action='store_true', default=False,
-        help='stop after creating the SVG file (implies --no-delete)')
+                        help='stop after creating the SVG file'
+                        ' (implies --no-delete)')
 
     return parser.parse_args()
 
@@ -220,7 +223,8 @@ def gen():
     asyncio.get_event_loop().run_until_complete(main(
         logger, C, size, False, False, 'graphics.txt'
     ))
-    return Response(open(C + '.pdf', 'rb').read(), mimetype='application/pdf')
+    with open(C + '.pdf', 'rb') as f:
+        return Response(f.read(), mimetype='application/pdf')
 
 
 @app.route('/')
@@ -233,6 +237,22 @@ def index():
     </form>'''
 
 
+class SystemTest(flask_testing.LiveServerTestCase):
+
+    def create_app(self):
+        app.config['LIVESERVER_TIMEOUT'] = 10
+        return app
+
+    def test_server_is_up_and_running(self):
+        response = requests.get(self.get_server_url())
+        self.assertEqual(response.status_code, 200)
+
+    def test_gen_nihao_200(self):
+        response = requests.post(self.get_server_url() + '/gen',
+                                 {'chars': '你好', 'size': '10'})
+        self.assertEqual(response.status_code, 200)
+
+
 if __name__ == '__main__':
 
     logging.basicConfig(level=logging.INFO)
@@ -240,6 +260,6 @@ if __name__ == '__main__':
     args = parse_argv()
     asyncio.get_event_loop().run_until_complete(main(
         logger, args.character[0], args.size, args.no_delete, args.no_pdf,
-         args.graphics_txt_path
+        args.graphics_txt_path
     ))
     logger.info('Program done. goodbye!')
