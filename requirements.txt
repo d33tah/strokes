@@ -1,4 +1,4 @@
 pyppeteer
-flask
+quart
 requests
 nose

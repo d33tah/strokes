@@ -35,7 +35,7 @@ import asyncio
 
 
 from pyppeteer import launch
-from flask import Flask, Response, request
+from quart import Quart, Response, request
 
 # those imports are for testing purposes:
 import unittest
@@ -45,7 +45,7 @@ import time
 import hashlib
 import requests
 
-app = Flask(__name__)
+app = Quart(__name__)
 
 
 PAGE_SIZE = (200, 300)
@@ -235,22 +235,23 @@ def parse_argv():
 
 
 @app.route('/gen', methods=['POST'])
-def gen():
+async def gen():
+    form = await request.form
     logger = logging.getLogger('strokes')
-    size = int(request.form.get('size') or 10)
-    C = request.form.get('chars') or 'X'
-    asyncio.new_event_loop().run_until_complete(main(
+    size = int(form.get('size') or 10)
+    C = form.get('chars') or 'X'
+    await main(
         logger, C, size, False, False, 'graphics.txt'
-    ))
+    )
     with open(C + '.pdf', 'rb') as f:
         return Response(f.read(), mimetype='application/pdf')
 
 
 # this is for testing purposes only - we need a way to turn off the server
 # once tests are done
-@app.route('/' + SHUTDOWN_CODE, methods=['POST'])
+@app.route('/' + SHUTDOWN_CODE, methods=['POST', 'GET'])
 def shutdown():
-    request.environ.get('werkzeug.server.shutdown')()
+    asyncio.get_event_loop().stop()
     return 'Server shutting down...'
 
 
