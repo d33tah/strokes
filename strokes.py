@@ -32,7 +32,7 @@ import subprocess
 import io
 
 from quart import Quart, Response, request
-from strokes_backend import main, start_browser
+from strokes_backend import main
 from strokes_composition import write_dot_to_file
 
 # those imports are for testing purposes:
