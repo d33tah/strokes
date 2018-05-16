@@ -6,7 +6,7 @@ FROM ubuntu:18.04
 #
 ###########################################################################
 
-RUN apt-get update && apt-get install -y python3-pip
+RUN apt-get update && apt-get install -y python3-pip graphviz
 
 RUN pip3 install pyppeteer
 
@@ -44,6 +44,8 @@ ADD ./requirements.txt /tmp
 RUN pip3 install -r /tmp/requirements.txt && rm /tmp/requirements.txt
 ADD ./strokes.py /tmp/
 ADD ./strokes_backend.py /tmp/
+ADD ./strokes_composition.py /tmp/
+ADD ./wiktionary-data.json /tmp/
 RUN chmod +x /tmp/strokes.py
 
 USER chrome

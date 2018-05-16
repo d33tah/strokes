@@ -28,9 +28,12 @@ TODO:
 import argparse
 import logging
 import asyncio
+import subprocess
+import io
 
 from quart import Quart, Response, request
-from strokes_backend import main
+from strokes_backend import main, start_browser
+from strokes_composition import write_dot_to_file
 
 # those imports are for testing purposes:
 import unittest
@@ -73,8 +76,8 @@ def parse_argv():
     return parser.parse_args()
 
 
-@app.route('/gen', methods=['POST'])
-async def gen():
+@app.route('/gen_strokes', methods=['POST'])
+async def gen_strokes():
     form = await request.form
     logger = logging.getLogger('strokes')
     size = int(form.get('size') or 10)
@@ -84,6 +87,18 @@ async def gen():
     )
     with open(C + '.pdf', 'rb') as f:
         return Response(f.read(), mimetype='application/pdf')
+
+
+@app.route('/gen_composition', methods=['POST'])
+async def gen_composition():
+    form = await request.form
+    x = form.get('chars')
+    f = io.StringIO()
+    write_dot_to_file(f, x)
+    s2 = subprocess.Popen(['dot', '-Tsvg'], stdout=subprocess.PIPE,
+                          stdin=subprocess.PIPE)
+    ret = s2.communicate(f.getvalue().encode('utf8'))
+    return Response(ret, mimetype='image/svg+xml')
 
 
 # this is for testing purposes only - we need a way to turn off the server
@@ -97,11 +112,17 @@ def shutdown():
 @app.route('/')
 def index():
     return '''<!DOCTYPE HTML><html><body>
-        <form action="/gen" method="post">
+        <form action="/gen_composition" method="post">
+        <p>Characters: <input type="text" name="chars" value="齾"/></p>
+        <input type="submit" value="Generate composition">
+        </form>
+
+        <form action="/gen_strokes" method="post">
         <p>Characters: <input type="text" name="chars" value="你好"/></p>
         <p>Size: <input type="text" name="size" value="10"/></p>
-        <input type="submit">
-    </form>'''
+        <input type="submit" value="Generate strokes">
+    </form>
+    '''
 
 
 class SystemTest(unittest.TestCase):
@@ -123,8 +144,13 @@ class SystemTest(unittest.TestCase):
         response = requests.get(self.get_server_url())
         self.assertEqual(response.status_code, 200)
 
-    def test_gen_nihao_200(self):
-        response = requests.post(self.get_server_url() + '/gen',
+    def test_gen_strokes_nihao_200(self):
+        response = requests.post(self.get_server_url() + '/gen_strokes',
+                                 {'chars': '你好', 'size': '10'})
+        self.assertEqual(response.status_code, 200)
+
+    def test_gen_composition_nihao_200(self):
+        response = requests.post(self.get_server_url() + '/gen_composition',
                                  {'chars': '你好', 'size': '10'})
         self.assertEqual(response.status_code, 200)
 
