@@ -51,4 +51,4 @@ RUN chmod +x /tmp/strokes.py
 USER chrome
 WORKDIR /tmp
 RUN nosetests strokes.py
-CMD FLASK_APP=/tmp/strokes.py flask run -h 0.0.0.0
+CMD QUART_APP=/tmp/strokes.py quart run -h 0.0.0.0
