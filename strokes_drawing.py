@@ -50,14 +50,11 @@ FOOTER = '''
 
 
 def load_strokes_db(graphics_txt_path):
+    ret = {'X': []}
     with open(graphics_txt_path, 'r', encoding='utf8') as f:
-        t = f.read()
-    ret = {
-        x['character']: x['strokes']
-        for l in t.split('\n')
-        for x in ([json.loads(l)] if l else [])
-    }
-    ret['X'] = []
+        for line in f:
+            x = json.loads(line)
+            ret[x['character']] = x['strokes']
     return ret
 
 
@@ -91,29 +88,27 @@ class ImageGenerator:
 
 
 def load_dictionary(dictionary_txt_path):
-    d = {}
+    d = {'X': ''}
     with open(dictionary_txt_path, 'r') as f:
         for line in f:
             j = json.loads(line)
             if j['pinyin']:
                 d[j['character']] = j['pinyin'][0]
-    d['X'] = ''
     return d
 
 
 def gen_images(input_characters, image_generator, strokes_db, num_repeats):
-    while True:
-        for C in input_characters:
-            strokes = strokes_db[C]
-            num_strokes = len(strokes)
-            for i in range(num_strokes):
-                for _ in range(num_repeats):
-                    yield image_generator.get_image(C, strokes, i, 0, i+1)
-                for _ in range(num_repeats):
-                    yield image_generator.get_image(C, strokes, 0, i + 1, 99)
-        for i in range(10):
-            C = random.choice(input_characters)
-            yield image_generator.get_image(C, [], 0, 0, 0)
+    for C in input_characters:
+        strokes = strokes_db[C]
+        num_strokes = len(strokes)
+        for i in range(num_strokes):
+            for _ in range(num_repeats):
+                yield image_generator.get_image(C, strokes, i, 0, i+1)
+            for _ in range(num_repeats):
+                yield image_generator.get_image(C, strokes, 0, i + 1, 99)
+    for i in range(10):
+        C = random.choice(input_characters)
+        yield image_generator.get_image(C, [], 0, 0, 0)
 
 
 def gen_svg(f, size, header, gen_images_iter):
@@ -122,9 +117,14 @@ def gen_svg(f, size, header, gen_images_iter):
     f.write(HEADER_SINGLE)
     f.write('<text x="0" y="7" font-size="5px">%s</text>' % header)
     for i in range(num_per_row * (num_rows - 1)):
-        fname = next(gen_images_iter)
+        try:
+            fname = next(gen_images_iter)
+        except StopIteration:
+            break
         x = (i % num_per_row) * size
         y = ((i // num_per_row) + 1) * size
+        if ((i // num_per_row) + 3) > num_rows:
+            break
         f.write(IMAGE_TPL % (x, y, size, size, fname))
     f.write(FOOTER_SINGLE)
 
@@ -153,8 +153,7 @@ class DrawStrokes:
         self.image_cache = []
         self.image_generator = ImageGenerator(self.image_cache, self.P)
 
-    async def draw(self, input_characters, size, num_repeats, out_path=None,
-                   no_delete=False, no_pdf=False):
+    async def draw(self, input_characters, size, num_repeats, out_path=None):
 
         LOGGER.info('Generating SVG...')
 
@@ -170,16 +169,11 @@ class DrawStrokes:
         with open(svg_path, 'w') as f:
             gen_svg(f, size, header, gen_images_iter)
 
-        if no_pdf:
-            return
-
         pdf_path = out_path or base_path + '.pdf'
         LOGGER.error('Generating %s...' % pdf_path)
         browser = await start_browser()
         await gen_pdf(browser, svg_path, pdf_path)
-
-        if no_delete:
-            return pdf_path
+        await browser.close()
 
         os.unlink(svg_path)
 
