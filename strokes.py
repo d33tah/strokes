@@ -121,7 +121,7 @@ def index():
         <form action="/gen_strokes" method="post">
         <p>Characters: <input type="text" name="chars" value="你好"/></p>
         <p>Size: <input type="text" name="size" value="10"/></p>
-        <p>Number of repetitions: <input type="text" name="nr" value="10"/></p>
+        <p>Number of repetitions: <input type="text" name="nr" value="3"/></p>
         <input type="submit" value="Generate strokes">
     </form>
     '''
