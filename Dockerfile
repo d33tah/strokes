@@ -43,7 +43,7 @@ RUN wget -nv https://github.com/skishore/makemeahanzi/blob/master/dictionary.txt
 ADD ./requirements.txt /tmp
 RUN pip3 install -r /tmp/requirements.txt && rm /tmp/requirements.txt
 ADD ./strokes.py /tmp/
-ADD ./strokes_backend.py /tmp/
+ADD ./strokes_drawing.py /tmp/
 ADD ./strokes_composition.py /tmp/
 ADD ./wiktionary-data.json /tmp/
 RUN chmod +x /tmp/strokes.py
