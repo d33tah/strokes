@@ -43,6 +43,7 @@ import hashlib
 import requests
 
 app = Quart(__name__)
+browser = start_browser()
 
 
 def random_string():
@@ -81,6 +82,7 @@ async def gen_strokes():
     form = await request.form
     logger = logging.getLogger('strokes')
     size = int(form.get('size') or 10)
+    size = int(form.get('nr') or 3)
     C = form.get('chars') or 'X'
     await main(
         logger, C, size, False, False, 'graphics.txt'
@@ -120,6 +122,7 @@ def index():
         <form action="/gen_strokes" method="post">
         <p>Characters: <input type="text" name="chars" value="你好"/></p>
         <p>Size: <input type="text" name="size" value="10"/></p>
+        <p>Number of repetitions: <input type="text" name="nr" value="10"/></p>
         <input type="submit" value="Generate strokes">
     </form>
     '''

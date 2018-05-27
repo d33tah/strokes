@@ -88,22 +88,22 @@ def load_dictionary():
     return d
 
 
-def gen_images(chars, strokes_db, images, P):
+def gen_images(chars, strokes_db, images, P, NR):
     while True:
         for C in chars:
             strokes = strokes_db[C]
             num_strokes = len(strokes)
             for i in range(num_strokes):
-                for _ in range(3):
+                for _ in range(NR):
                     yield get_image(C, i, images, strokes, 0, i+1, P[C])
-                for _ in range(3):
+                for _ in range(NR):
                     yield get_image(C, 0, images, strokes, i + 1, 99, P[C])
         for i in range(10):
             C = random.choice(chars)
             yield get_image(C, 0, images, [], 99, 99, P[C])
 
 
-def gen_svg(C, strokes_db, size, fi):
+def gen_svg(C, strokes_db, size, fi, NR):
     P = load_dictionary()
     num_per_row = PAGE_SIZE[0] // size
     num_rows = PAGE_SIZE[1] // size
@@ -112,7 +112,7 @@ def gen_svg(C, strokes_db, size, fi):
     header = ', '.join('%s (%s)' % (c, P[c]) for c in chars)
     fi.write('<text x="0" y="7" font-size="5px">%s</text>' % header)
     images = []
-    gen_images_iter = iter(gen_images(chars, strokes_db, images, P))
+    gen_images_iter = iter(gen_images(chars, strokes_db, images, P, NR))
     for i in range(num_per_row * (num_rows - 1)):
         fname = next(gen_images_iter)
         x = (i % num_per_row) * size
@@ -122,21 +122,24 @@ def gen_svg(C, strokes_db, size, fi):
     return images
 
 
-async def gen_pdf(infile, outfile):
+async def start_browser():
     # this lets us work without CAP_SYS_ADMIN:
     options = {'args': ['--no-sandbox']}
     # HACK: we're disabling signals because they fail in system tests
     if threading.currentThread() != threading._main_thread:
         options.update({'handleSIGINT': False, 'handleSIGHUP': False,
                         'handleSIGTERM': False})
-    browser = await launch(**options)
+    return await launch(**options)
+
+
+async def gen_pdf(browser, infile, outfile):
     page = await browser.newPage()
     await page.goto('file://%s' % infile)
     await page.pdf({'path': outfile})
     await browser.close()
 
 
-async def main(logger, C, size, no_delete, no_pdf, graphics_txt_path):
+async def main(browser, logger, C, size, no_delete, no_pdf, graphics_txt_path, NR):
 
     logger.info('Loading strokes_db...')
     strokes_db = load_strokes_db(graphics_txt_path)
@@ -144,13 +147,13 @@ async def main(logger, C, size, no_delete, no_pdf, graphics_txt_path):
     logger.info('Generating SVG...')
     svg_path = C + '.svg'
     with open(svg_path, 'w') as fi:
-        images = gen_svg(C, strokes_db, size, fi)
+        images = gen_svg(C, strokes_db, size, fi, NR)
 
     if no_pdf:
         return
 
     base_path = os.getcwd() + '/' + C
-    await gen_pdf(base_path + '.svg', base_path + '.pdf')
+    await gen_pdf(browser, base_path + '.svg', base_path + '.pdf')
 
     if no_delete:
         return
