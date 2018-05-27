@@ -136,7 +136,7 @@ async def gen_pdf(infile, outfile):
     await browser.close()
 
 
-async def main(browser, logger, C, size, no_delete, no_pdf, graphics_txt_path, NR):
+async def main(logger, C, size, no_delete, no_pdf, graphics_txt_path, NR):
 
     logger.info('Loading strokes_db...')
     strokes_db = load_strokes_db(graphics_txt_path)

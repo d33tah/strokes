@@ -81,10 +81,10 @@ async def gen_strokes():
     form = await request.form
     logger = logging.getLogger('strokes')
     size = int(form.get('size') or 10)
-    size = int(form.get('nr') or 3)
+    num_repetitions = int(form.get('nr') or 3)
     C = form.get('chars') or 'X'
     await main(
-        logger, C, size, False, False, 'graphics.txt'
+        logger, C, size, False, False, 'graphics.txt', num_repetitions
     )
     with open(C + '.pdf', 'rb') as f:
         return Response(f.read(), mimetype='application/pdf')
