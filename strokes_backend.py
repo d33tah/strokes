@@ -122,17 +122,14 @@ def gen_svg(C, strokes_db, size, fi, NR):
     return images
 
 
-async def start_browser():
+async def gen_pdf(infile, outfile):
     # this lets us work without CAP_SYS_ADMIN:
     options = {'args': ['--no-sandbox']}
     # HACK: we're disabling signals because they fail in system tests
     if threading.currentThread() != threading._main_thread:
         options.update({'handleSIGINT': False, 'handleSIGHUP': False,
                         'handleSIGTERM': False})
-    return await launch(**options)
-
-
-async def gen_pdf(browser, infile, outfile):
+    browser = await launch(**options)
     page = await browser.newPage()
     await page.goto('file://%s' % infile)
     await page.pdf({'path': outfile})
@@ -153,7 +150,7 @@ async def main(browser, logger, C, size, no_delete, no_pdf, graphics_txt_path, N
         return
 
     base_path = os.getcwd() + '/' + C
-    await gen_pdf(browser, base_path + '.svg', base_path + '.pdf')
+    await gen_pdf(base_path + '.svg', base_path + '.pdf')
 
     if no_delete:
         return
