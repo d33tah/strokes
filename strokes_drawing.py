@@ -2,11 +2,15 @@ import json
 import os
 import threading
 import random
+import logging
+
 
 from pyppeteer import launch
 
 
 PAGE_SIZE = (200, 300)
+LOGGER = logging.getLogger(__name__)
+LOGGER.setLevel(logging.INFO)
 
 
 HEADER_SINGLE = '''
@@ -57,9 +61,9 @@ def load_strokes_db(graphics_txt_path):
     return ret
 
 
-def get_image(C, img_num, images, strokes, skip_strokes, stop_at, add_text=''):
+def get_image(C, img_num, image_cache, strokes, skip_strokes, stop_at, add_text=''):
     fname = C + '%d-%d-%d.svg' % (img_num, skip_strokes, stop_at)
-    if fname in images:
+    if fname in image_cache:
         return fname
     with open(fname, 'w', encoding='utf8') as f:
         f.write(HEADER)
@@ -73,7 +77,7 @@ def get_image(C, img_num, images, strokes, skip_strokes, stop_at, add_text=''):
             line_size = (20 if n - 1 < img_num else 10)
             f.write(PATH_TPL % (stroke, line_size))
         f.write(FOOTER)
-        images.append(fname)
+    image_cache.append(fname)
     return fname
 
 
@@ -88,74 +92,86 @@ def load_dictionary():
     return d
 
 
-def gen_images(chars, strokes_db, images, P, NR):
+def gen_image_cache(input_characters, strokes_db, image_cache, P, num_repeats):
     while True:
-        for C in chars:
+        for C in input_characters:
             strokes = strokes_db[C]
             num_strokes = len(strokes)
             for i in range(num_strokes):
-                for _ in range(NR):
-                    yield get_image(C, i, images, strokes, 0, i+1, P[C])
-                for _ in range(NR):
-                    yield get_image(C, 0, images, strokes, i + 1, 99, P[C])
+                for _ in range(num_repeats):
+                    yield get_image(C, i, image_cache, strokes, 0, i+1, P[C])
+                for _ in range(num_repeats):
+                    yield get_image(C, 0, image_cache, strokes, i + 1, 99, P[C])
         for i in range(10):
-            C = random.choice(chars)
-            yield get_image(C, 0, images, [], 99, 99, P[C])
+            C = random.choice(input_characters)
+            yield get_image(C, 0, image_cache, [], 99, 99, P[C])
 
 
-def gen_svg(C, strokes_db, size, fi, NR):
+def gen_svg(f, input_characters, strokes_db, size, num_repeats):
     P = load_dictionary()
     num_per_row = PAGE_SIZE[0] // size
     num_rows = PAGE_SIZE[1] // size
-    fi.write(HEADER_SINGLE)
-    chars = C
-    header = ', '.join('%s (%s)' % (c, P[c]) for c in chars)
-    fi.write('<text x="0" y="7" font-size="5px">%s</text>' % header)
-    images = []
-    gen_images_iter = iter(gen_images(chars, strokes_db, images, P, NR))
+    f.write(HEADER_SINGLE)
+    header = ', '.join('%s (%s)' % (c, P[c]) for c in input_characters)
+    f.write('<text x="0" y="7" font-size="5px">%s</text>' % header)
+    image_cache = []
+    gen_image_cache_iter = iter(gen_image_cache(input_characters, strokes_db, image_cache, P, num_repeats))
     for i in range(num_per_row * (num_rows - 1)):
-        fname = next(gen_images_iter)
+        fname = next(gen_image_cache_iter)
         x = (i % num_per_row) * size
         y = ((i // num_per_row) + 1) * size
-        fi.write(IMAGE_TPL % (x, y, size, size, fname))
-    fi.write(FOOTER_SINGLE)
-    return images
+        f.write(IMAGE_TPL % (x, y, size, size, fname))
+    f.write(FOOTER_SINGLE)
+    return image_cache
 
 
-async def gen_pdf(infile, outfile):
+async def start_browser():
     # this lets us work without CAP_SYS_ADMIN:
     options = {'args': ['--no-sandbox']}
     # HACK: we're disabling signals because they fail in system tests
     if threading.currentThread() != threading._main_thread:
         options.update({'handleSIGINT': False, 'handleSIGHUP': False,
                         'handleSIGTERM': False})
-    browser = await launch(**options)
+    return await launch(**options)
+
+
+async def gen_pdf(browser, infile, outfile):
     page = await browser.newPage()
     await page.goto('file://%s' % infile)
     await page.pdf({'path': outfile})
-    await browser.close()
 
 
-async def main(logger, C, size, no_delete, no_pdf, graphics_txt_path, NR):
+class DrawStrokes:
 
-    logger.info('Loading strokes_db...')
-    strokes_db = load_strokes_db(graphics_txt_path)
+    def __init__(self, graphics_txt_path):
+        self.strokes_db = load_strokes_db(graphics_txt_path)
 
-    logger.info('Generating SVG...')
-    svg_path = C + '.svg'
-    with open(svg_path, 'w') as fi:
-        images = gen_svg(C, strokes_db, size, fi, NR)
+    async def draw(self, input_characters, size, num_repeats, out_path=None,
+                   no_delete=False, no_pdf=False):
 
-    if no_pdf:
-        return
+        LOGGER.info('Generating SVG...')
 
-    base_path = os.getcwd() + '/' + C
-    await gen_pdf(base_path + '.svg', base_path + '.pdf')
+        image_cache = []
 
-    if no_delete:
-        return
+        base_path = os.getcwd() + '/' + input_characters
+        svg_path = base_path + '.svg'
+        with open(svg_path, 'w') as f:
+            image_cache = gen_svg(f, input_characters, self.strokes_db, size, num_repeats)
 
-    for fname in set(images):
-        os.unlink(fname)
+        if no_pdf:
+            return
 
-    os.unlink(svg_path)
+        pdf_path = out_path or base_path + '.pdf'
+        LOGGER.error('Generating %s...' % pdf_path)
+        browser = await start_browser()
+        await gen_pdf(browser, svg_path, pdf_path)
+
+        if no_delete:
+            return pdf_path
+
+        for fname in set(image_cache):
+            os.unlink(fname)
+
+        os.unlink(svg_path)
+
+        return pdf_path

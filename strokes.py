@@ -25,14 +25,12 @@ TODO:
 ------------------------------------------------------------------------------
 '''
 
-import argparse
-import logging
 import asyncio
 import subprocess
 import io
 
 from quart import Quart, Response, request
-from strokes_drawing import main
+from strokes_drawing import DrawStrokes
 from strokes_composition import write_dot_to_file
 
 # those imports are for testing purposes:
@@ -43,6 +41,7 @@ import hashlib
 import requests
 
 app = Quart(__name__)
+draw_strokes = DrawStrokes('graphics.txt')
 
 
 def random_string():
@@ -52,41 +51,15 @@ def random_string():
 SHUTDOWN_CODE = random_string()
 
 
-def parse_argv():
-    parser = argparse.ArgumentParser(
-            description=__doc__,
-            formatter_class=argparse.RawDescriptionHelpFormatter
-    )
-
-    parser.add_argument('character', nargs=1)
-
-    parser.add_argument('--size', default=13)
-
-    parser.add_argument('--graphics-txt-path', default='graphics.txt',
-                        help='path to skisore\'s makemeahanzi/graphics.txt'
-                        ' file')
-
-    parser.add_argument('--no-delete', action='store_true', default=False,
-                        help='don\'t delete temporary files')
-
-    parser.add_argument('--no-pdf', action='store_true', default=False,
-                        help='stop after creating the SVG file'
-                        ' (implies --no-delete)')
-
-    return parser.parse_args()
-
-
 @app.route('/gen_strokes', methods=['POST'])
 async def gen_strokes():
     form = await request.form
-    logger = logging.getLogger('strokes')
     size = int(form.get('size') or 10)
     num_repetitions = int(form.get('nr') or 3)
     C = form.get('chars') or 'X'
-    await main(
-        logger, C, size, False, False, 'graphics.txt', num_repetitions
-    )
-    with open(C + '.pdf', 'rb') as f:
+    out_path = C + '.pdf'
+    await draw_strokes.draw(C, size, num_repetitions, out_path)
+    with open(out_path, 'rb') as f:
         return Response(f.read(), mimetype='application/pdf')
 
 
@@ -155,15 +128,3 @@ class SystemTest(unittest.TestCase):
         response = requests.post(self.get_server_url() + '/gen_composition',
                                  {'chars': '你好', 'size': '10'})
         self.assertEqual(response.status_code, 200)
-
-
-if __name__ == '__main__':
-
-    logging.basicConfig(level=logging.INFO)
-    logger = logging.getLogger('strokes')
-    args = parse_argv()
-    asyncio.get_event_loop().run_until_complete(main(
-        logger, args.character[0], args.size, args.no_delete, args.no_pdf,
-        args.graphics_txt_path
-    ))
-    logger.info('Program done. goodbye!')
