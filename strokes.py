@@ -41,7 +41,7 @@ import hashlib
 import requests
 
 app = Quart(__name__)
-draw_strokes = DrawStrokes('graphics.txt')
+draw_strokes = DrawStrokes('graphics.txt', 'dictionary.txt')
 
 
 def random_string():

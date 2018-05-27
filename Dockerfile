@@ -50,5 +50,6 @@ RUN chmod +x /tmp/strokes.py
 
 USER chrome
 WORKDIR /tmp
+RUN mkdir /tmp/imagecache
 RUN nosetests strokes.py
 CMD QUART_APP=/tmp/strokes.py quart run -h 0.0.0.0
