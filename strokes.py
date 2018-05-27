@@ -43,7 +43,6 @@ import hashlib
 import requests
 
 app = Quart(__name__)
-browser = start_browser()
 
 
 def random_string():
