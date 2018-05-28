@@ -115,24 +115,29 @@ def gen_images(input_characters, image_generator, strokes_db, num_repeats):
 
 
 def gen_svg(size, header, gen_images_iter):
-    fpath = os.path.join(TMPDIR, str(uuid.uuid4()) + '.svg')
-    with open(fpath, 'w') as f:
-        num_per_row = PAGE_SIZE[0] // size
-        num_rows = PAGE_SIZE[1] // size
-        f.write(HEADER_SINGLE)
-        f.write('<text x="0" y="7" font-size="5px">%s</text>' % header)
-        for i in range(num_per_row * (num_rows - 1)):
-            try:
-                fname = next(gen_images_iter)
-            except StopIteration:
-                break
-            x = (i % num_per_row) * size
-            y = ((i // num_per_row) + 1) * size
-            if ((i // num_per_row) + 3) > num_rows:
-                break
-            f.write(IMAGE_TPL % (x, y, size, size, fname))
-        f.write(FOOTER_SINGLE)
-    return [os.path.abspath(fpath)]
+    fpaths = []
+    keep_going = True
+    while keep_going:
+        fpath = os.path.join(TMPDIR, str(uuid.uuid4()) + '.svg')
+        fpaths.append(os.path.abspath(fpath))
+        with open(fpath, 'w') as f:
+            num_per_row = PAGE_SIZE[0] // size
+            num_rows = PAGE_SIZE[1] // size
+            f.write(HEADER_SINGLE)
+            f.write('<text x="0" y="7" font-size="5px">%s</text>' % header)
+            for i in range(num_per_row * (num_rows - 1)):
+                try:
+                    fname = next(gen_images_iter)
+                except StopIteration:
+                    keep_going = False
+                    break
+                x = (i % num_per_row) * size
+                y = ((i // num_per_row) + 1) * size
+                if ((i // num_per_row) + 3) > num_rows:
+                    break
+                f.write(IMAGE_TPL % (x, y, size, size, fname))
+            f.write(FOOTER_SINGLE)
+    return fpaths
 
 
 async def start_browser():
