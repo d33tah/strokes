@@ -79,6 +79,7 @@ class ImageGenerator:
     def get_image(self, C, strokes, img_num, skip_strokes, stop_at):
 
         fname = TMPDIR + C + '%d-%d-%d.svg' % (img_num, skip_strokes, stop_at)
+        fname = os.path.abspath(fname)
         if fname in self.image_cache:
             return fname
 
