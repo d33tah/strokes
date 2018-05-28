@@ -16,7 +16,7 @@ TODO:
     * add print margins?
     * more options: how many repetitions of each stroke, how many characters
       does it take to switch to random mode?
-    * multi-page support
+    * multi-page support: print title only for the current page
     * repetition mode: show two strokes at once?
     * make frontend cuter
     * custom titles
