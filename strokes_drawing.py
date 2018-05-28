@@ -3,6 +3,8 @@ import os
 import threading
 import random
 import logging
+import uuid
+import subprocess
 
 
 from pyppeteer import launch
@@ -58,6 +60,16 @@ def load_strokes_db(graphics_txt_path):
     return ret
 
 
+def load_dictionary(dictionary_txt_path):
+    d = {'X': ''}
+    with open(dictionary_txt_path, 'r') as f:
+        for line in f:
+            j = json.loads(line)
+            if j['pinyin']:
+                d[j['character']] = j['pinyin'][0]
+    return d
+
+
 class ImageGenerator:
 
     def __init__(self, image_cache, P):
@@ -87,16 +99,6 @@ class ImageGenerator:
         return fname
 
 
-def load_dictionary(dictionary_txt_path):
-    d = {'X': ''}
-    with open(dictionary_txt_path, 'r') as f:
-        for line in f:
-            j = json.loads(line)
-            if j['pinyin']:
-                d[j['character']] = j['pinyin'][0]
-    return d
-
-
 def gen_images(input_characters, image_generator, strokes_db, num_repeats):
     for C in input_characters:
         strokes = strokes_db[C]
@@ -111,22 +113,25 @@ def gen_images(input_characters, image_generator, strokes_db, num_repeats):
         yield image_generator.get_image(C, [], 0, 0, 0)
 
 
-def gen_svg(f, size, header, gen_images_iter):
-    num_per_row = PAGE_SIZE[0] // size
-    num_rows = PAGE_SIZE[1] // size
-    f.write(HEADER_SINGLE)
-    f.write('<text x="0" y="7" font-size="5px">%s</text>' % header)
-    for i in range(num_per_row * (num_rows - 1)):
-        try:
-            fname = next(gen_images_iter)
-        except StopIteration:
-            break
-        x = (i % num_per_row) * size
-        y = ((i // num_per_row) + 1) * size
-        if ((i // num_per_row) + 3) > num_rows:
-            break
-        f.write(IMAGE_TPL % (x, y, size, size, fname))
-    f.write(FOOTER_SINGLE)
+def gen_svg(size, header, gen_images_iter):
+    fpath = os.path.join(TMPDIR, str(uuid.uuid4()) + '.svg')
+    with open(fpath, 'w') as f:
+        num_per_row = PAGE_SIZE[0] // size
+        num_rows = PAGE_SIZE[1] // size
+        f.write(HEADER_SINGLE)
+        f.write('<text x="0" y="7" font-size="5px">%s</text>' % header)
+        for i in range(num_per_row * (num_rows - 1)):
+            try:
+                fname = next(gen_images_iter)
+            except StopIteration:
+                break
+            x = (i % num_per_row) * size
+            y = ((i // num_per_row) + 1) * size
+            if ((i // num_per_row) + 3) > num_rows:
+                break
+            f.write(IMAGE_TPL % (x, y, size, size, fname))
+        f.write(FOOTER_SINGLE)
+    return [os.path.abspath(fpath)]
 
 
 async def start_browser():
@@ -145,6 +150,12 @@ async def gen_pdf(browser, infile, outfile):
     await page.pdf({'path': outfile})
 
 
+def join_pdfs(pdfs, outpath=None):
+    outpath = outpath or os.path.join(TMPDIR, str(uuid.uuid4()) + '.pdf')
+    subprocess.check_call(['pdfjoin', '--outfile', outpath] + pdfs)
+    return outpath
+
+
 class DrawStrokes:
 
     def __init__(self, graphics_txt_path, dictionary_txt_path):
@@ -153,7 +164,7 @@ class DrawStrokes:
         self.image_cache = []
         self.image_generator = ImageGenerator(self.image_cache, self.P)
 
-    async def draw(self, input_characters, size, num_repeats, out_path=None):
+    async def draw(self, input_characters, size, num_repeats, out_path):
 
         LOGGER.info('Generating SVG...')
 
@@ -165,16 +176,19 @@ class DrawStrokes:
                            for c in input_characters)
 
         base_path = os.getcwd() + '/' + input_characters
-        svg_path = base_path + '.svg'
-        with open(svg_path, 'w') as f:
-            gen_svg(f, size, header, gen_images_iter)
+        svg_paths = gen_svg(size, header, gen_images_iter)
 
-        pdf_path = out_path or base_path + '.pdf'
-        LOGGER.error('Generating %s...' % pdf_path)
+        LOGGER.error('Generating pdfs...')
         browser = await start_browser()
-        await gen_pdf(browser, svg_path, pdf_path)
+        pdf_paths = []
+        for n, svg_path in enumerate(svg_paths):
+            pdf_path = base_path + str(n) + '.pdf'
+            pdf_paths.append(pdf_path)
+            await gen_pdf(browser, svg_path, pdf_path)
+            os.unlink(svg_path)
+
+        out_pdf_path = join_pdfs(pdf_paths, out_path)
         await browser.close()
 
-        os.unlink(svg_path)
 
-        return pdf_path
+        return out_pdf_path
