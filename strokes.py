@@ -57,8 +57,7 @@ async def gen_strokes():
     size = int(form.get('size') or 10)
     num_repetitions = int(form.get('nr') or 3)
     C = form.get('chars') or 'X'
-    out_path = C + '.pdf'
-    await draw_strokes.draw(C, size, num_repetitions, out_path)
+    out_path = await draw_strokes.draw(C, size, num_repetitions)
     with open(out_path, 'rb') as f:
         return Response(f.read(), mimetype='application/pdf')
 

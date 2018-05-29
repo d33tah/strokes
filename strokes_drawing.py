@@ -170,7 +170,7 @@ class DrawStrokes:
         self.image_cache = []
         self.image_generator = ImageGenerator(self.image_cache, self.P)
 
-    async def draw(self, input_characters, size, num_repeats, out_path):
+    async def draw(self, input_characters, size, num_repeats):
 
         LOGGER.info('Generating SVG...')
 
@@ -181,7 +181,8 @@ class DrawStrokes:
         header = ', '.join('%s (%s)' % (c, self.P[c])
                            for c in input_characters)
 
-        base_path = os.getcwd() + '/' + input_characters
+        base_path = os.getcwd() + '/' + str(hash(input_characters))
+        out_path = base_path + '.pdf'
         svg_paths = gen_svg(size, header, gen_images_iter)
 
         LOGGER.error('Generating pdfs...')
