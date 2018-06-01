@@ -181,7 +181,7 @@ class DrawStrokes:
         header = ', '.join('%s (%s)' % (c, self.P[c])
                            for c in input_characters)
 
-        base_path = os.getcwd() + '/' + str(hash(input_characters))
+        base_path = os.getcwd() + '/' + str(hash(input_characters) * -1)
         out_path = base_path + '.pdf'
         svg_paths = gen_svg(size, header, gen_images_iter)
 
