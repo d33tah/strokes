@@ -12,7 +12,11 @@ from pyppeteer import launch
 
 PAGE_SIZE = (200, 300)
 LOGGER = logging.getLogger(__name__)
-TMPDIR = 'imagecache/'
+if '__file__' in globals():
+    CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+else:
+    CURRENT_DIR = '.'
+TMPDIR = '%s/imagecache/' % CURRENT_DIR
 
 
 HEADER_SINGLE = '''
