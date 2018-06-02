@@ -193,7 +193,7 @@ class DrawStrokes:
             pdf_path = base_path + str(n) + '.pdf'
             pdf_paths.append(pdf_path)
             await gen_pdf(browser, svg_path, pdf_path)
-            os.unlink(svg_path)
+            #os.unlink(svg_path)
 
         out_pdf_path = join_pdfs(pdf_paths, out_path)
         await browser.close()
