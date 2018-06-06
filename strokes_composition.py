@@ -30,6 +30,11 @@ def get_first(back, x):
     return x
 
 
+def D(char):
+    # TODO: add definitions here.
+    return char
+
+
 def write_dot_to_file(f, chars,
                       wiktionary_parsed_filename='wiktionary-data.json'):
 
@@ -45,7 +50,7 @@ def write_dot_to_file(f, chars,
             continue
 
         f.write('"%s" [URL="http://en.wiktionary.org/wiki/%s", %s];'
-                % (to_decompose, to_decompose, fillcolor(d, to_decompose)))
+                % (D(to_decompose), to_decompose, fillcolor(d, to_decompose)))
 
         for char in d.get(to_decompose, {}).get('ids', ''):
             back[char] = to_decompose
@@ -54,12 +59,13 @@ def write_dot_to_file(f, chars,
             first = get_first(back, to_decompose)
 
             f.write('"%s" [URL="http://en.wiktionary.org/wiki/%s", %s];'
-                    % (char, char, fillcolor(d, char)))
+                    % (D(char), char, fillcolor(d, char)))
 
             same_radical = d[first]['rad'] == d.get(char, {}).get('rad')
+            definitions = D(to_decompose), D(char)
             if same_radical and is_radical(d, char):
-                f.write('"%s" -- "%s" [penwidth=2];' % (to_decompose, char))
+                f.write('"%s" -- "%s" [penwidth=2];' % definitions)
             else:
-                f.write('"%s" -- "%s" [penwidth=1];' % (to_decompose, char))
+                f.write('"%s" -- "%s" [penwidth=1];' % definitions)
             s.append(char)
     f.write('}')
