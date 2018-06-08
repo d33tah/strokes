@@ -4,6 +4,15 @@ Code that generates compositions. TODO: clean up.
 
 import json
 import unicodedata
+import textwrap
+
+
+with open('all_definitions.json') as f:
+    definitions = eval(f.read())
+
+with open('alt_forms.json') as f:
+    alt_forms = json.loads(f.read())
+
 
 
 def try_uniname(x):
@@ -30,9 +39,21 @@ def get_first(back, x):
     return x
 
 
+def get_def(char):
+    if char in definitions:
+        return definitions[char]
+    if char in alt_forms and alt_forms[char] in definitions:
+        return definitions[alt_forms[char]]
+    return ''
+
+
+def wrap(x, n=15):
+    return '\n'.join(textwrap.wrap(x, n))
+
+
 def D(char):
     # TODO: add definitions here.
-    return char
+    return "%s\n%s" % (char, wrap(get_def(char)))
 
 
 def write_dot_to_file(f, chars,
@@ -41,9 +62,9 @@ def write_dot_to_file(f, chars,
     with open(wiktionary_parsed_filename) as wiktionary_parsed_file:
         d = json.loads(wiktionary_parsed_file.read())
 
-    s = list(chars)
+    s = list(reversed(chars))
     back = {}
-    f.write('strict graph { rankdir=LR; ')
+    f.write('strict graph { rankdir=LR;')
     while s:
         to_decompose = s.pop(0)
         if not try_uniname(to_decompose).startswith('CJK '):

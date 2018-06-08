@@ -47,6 +47,8 @@ ADD ./strokes.py /tmp/
 ADD ./strokes_drawing.py /tmp/
 ADD ./strokes_composition.py /tmp/
 ADD ./wiktionary-data.json /tmp/
+ADD ./alt_forms.json /tmp/
+ADD ./all_definitions.json /tmp/
 RUN chmod +x /tmp/strokes.py
 
 USER chrome
