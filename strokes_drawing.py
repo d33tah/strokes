@@ -4,10 +4,10 @@ import threading
 import random
 import logging
 import uuid
-import subprocess
 
 
 from pyppeteer import launch
+from PyPDF2 import PdfFileMerger
 
 
 PAGE_SIZE = (200, 300)
@@ -158,8 +158,16 @@ async def gen_pdf(browser, infile, outfile):
 
 
 def join_pdfs(pdfs, outpath=None):
+
+    merger = PdfFileMerger()
+
+    for pdf in pdfs:
+        merger.append(open(pdf, 'rb'))
+
+
     outpath = outpath or os.path.join(TMPDIR, str(uuid.uuid4()) + '.pdf')
-    subprocess.check_call(['pdfjoin', '--outfile', outpath] + pdfs)
+    with open(outpath, 'wb') as fout:
+        merger.write(fout)
     return outpath
 
 

@@ -21,7 +21,6 @@ RUN groupadd chrome && useradd -g chrome -s /bin/bash -G audio,video chrome \
     && mkdir -p /home/chrome && chown -R chrome:chrome /home/chrome
 
 RUN apt-get update && apt-get install -y fonts-noto-cjk locales wget
-RUN apt-get update && apt-get install -y texlive-extra-utils
 
 USER chrome
 RUN python3 -c '__import__("pyppeteer.chromium_downloader").chromium_downloader.download_chromium()'
