@@ -97,9 +97,7 @@ def gen_images(P, input_characters, strokes_db, num_repeats):
         num_strokes = len(strokes)
         for i in range(num_strokes):
             for _ in range(num_repeats):
-                yield image_generator.get_image(C, strokes, i, 0, i+1)
-            for _ in range(num_repeats):
-                yield image_generator.get_image(C, strokes, 0, i + 1, 99)
+                yield generate_image(P,C, strokes, i, 0, 99)
     for i in range(10):
         C = random.choice(input_characters)
         yield generate_image(P,C, [], 0, 0, 0)
