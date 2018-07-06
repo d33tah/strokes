@@ -72,31 +72,26 @@ def load_dictionary(dictionary_txt_path):
     return d
 
 
-class ImageGenerator:
+def generate_image(P, C, strokes, img_num, skip_strokes, stop_at):
 
-    def __init__(self, P):
-        self.P = P
+    add_text = P[C]
 
-    def get_image(self, C, strokes, img_num, skip_strokes, stop_at):
+    with io.StringIO() as f:
 
-        add_text = self.P[C]
-
-        with io.StringIO() as f:
-
-            f.write(''.join([HEADER, '<text x="50" y="200" font-size="150px">',
-                            add_text, '</text>', HEADER2]))
-            for n, stroke in enumerate(strokes):
-                if n < skip_strokes or n >= stop_at:
-                    continue
-                # IMHO this can safely be hardcoded because it's relative
-                # to this image
-                line_size = (20 if n - 1 < img_num else 10)
-                f.write(PATH_TPL % (stroke, line_size))
-            f.write(FOOTER)
-            return f.getvalue()
+        f.write(''.join([HEADER, '<text x="50" y="200" font-size="150px">',
+                        add_text, '</text>', HEADER2]))
+        for n, stroke in enumerate(strokes):
+            if n < skip_strokes or n >= stop_at:
+                continue
+            # IMHO this can safely be hardcoded because it's relative
+            # to this image
+            line_size = (20 if n - 1 < img_num else 10)
+            f.write(PATH_TPL % (stroke, line_size))
+        f.write(FOOTER)
+        return f.getvalue()
 
 
-def gen_images(input_characters, image_generator, strokes_db, num_repeats):
+def gen_images(P, input_characters, strokes_db, num_repeats):
     for C in input_characters:
         strokes = strokes_db[C]
         num_strokes = len(strokes)
@@ -107,7 +102,7 @@ def gen_images(input_characters, image_generator, strokes_db, num_repeats):
                 yield image_generator.get_image(C, strokes, 0, i + 1, 99)
     for i in range(10):
         C = random.choice(input_characters)
-        yield image_generator.get_image(C, [], 0, 0, 0)
+        yield generate_image(P,C, [], 0, 0, 0)
 
 
 def gen_svg(size, header, gen_images_iter):
@@ -159,46 +154,40 @@ def join_pdfs(pdfs, outpath=None):
     for pdf in pdfs:
         merger.append(open(pdf, 'rb'))
 
-
     outpath = outpath or os.path.join(TMPDIR, str(uuid.uuid4()) + '.pdf')
     with open(outpath, 'wb') as fout:
         merger.write(fout)
     return outpath
 
 
-class DrawStrokes:
+async def draw(graphics_txt_path, dictionary_txt_path, input_characters,
+               size, num_repeats):
 
-    def __init__(self, graphics_txt_path, dictionary_txt_path):
-        self.strokes_db = load_strokes_db(graphics_txt_path)
-        self.P = load_dictionary(dictionary_txt_path)
-        self.image_generator = ImageGenerator(self.P)
+    strokes_db = load_strokes_db(graphics_txt_path)
+    P = load_dictionary(dictionary_txt_path)
 
-    async def draw(self, input_characters, size, num_repeats):
+    LOGGER.info('Generating SVG...')
 
-        LOGGER.info('Generating SVG...')
+    gen_images_iter = iter(gen_images(P, input_characters, strokes_db,
+                                      num_repeats))
 
-        gen_images_iter = iter(gen_images(input_characters,
-                                          self.image_generator,
-                                          self.strokes_db, num_repeats))
+    header = ', '.join('%s (%s)' % (c, P[c])
+                       for c in input_characters)
 
-        header = ', '.join('%s (%s)' % (c, self.P[c])
-                           for c in input_characters)
+    base_path = os.getcwd() + '/' + str(abs(hash(input_characters)))
+    out_path = base_path + '.pdf'
+    svg_paths = gen_svg(size, header, gen_images_iter)
 
-        base_path = os.getcwd() + '/' + str(hash(input_characters) * -1)
-        out_path = base_path + '.pdf'
-        svg_paths = gen_svg(size, header, gen_images_iter)
+    LOGGER.error('Generating pdfs...')
+    browser = await start_browser()
+    pdf_paths = []
+    for n, svg_path in enumerate(svg_paths):
+        pdf_path = base_path + str(n) + '.pdf'
+        pdf_paths.append(pdf_path)
+        await gen_pdf(browser, svg_path, pdf_path)
+        #os.unlink(svg_path)
 
-        LOGGER.error('Generating pdfs...')
-        browser = await start_browser()
-        pdf_paths = []
-        for n, svg_path in enumerate(svg_paths):
-            pdf_path = base_path + str(n) + '.pdf'
-            pdf_paths.append(pdf_path)
-            await gen_pdf(browser, svg_path, pdf_path)
-            #os.unlink(svg_path)
+    out_pdf_path = join_pdfs(pdf_paths, out_path)
+    await browser.close()
 
-        out_pdf_path = join_pdfs(pdf_paths, out_path)
-        await browser.close()
-
-
-        return out_pdf_path
+    return out_pdf_path

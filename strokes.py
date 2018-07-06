@@ -30,7 +30,7 @@ import subprocess
 import io
 
 from quart import Quart, Response, request
-from strokes_drawing import DrawStrokes
+from strokes_drawing import draw
 from strokes_composition import write_dot_to_file
 
 # those imports are for testing purposes:
@@ -41,7 +41,6 @@ import hashlib
 import requests
 
 app = Quart(__name__)
-draw_strokes = DrawStrokes('graphics.txt', 'dictionary.txt')
 
 
 def random_string():
@@ -57,7 +56,8 @@ async def gen_strokes():
     size = int(form.get('size') or 10)
     num_repetitions = int(form.get('nr') or 3)
     C = form.get('chars') or 'X'
-    out_path = await draw_strokes.draw(C, size, num_repetitions)
+    out_path = await draw('graphics.txt', 'dictionary.txt', C, size,
+                          num_repetitions)
     with open(out_path, 'rb') as f:
         return Response(f.read(), mimetype='application/pdf')
 
