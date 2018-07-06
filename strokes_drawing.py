@@ -4,6 +4,7 @@ import threading
 import random
 import logging
 import uuid
+import io
 
 
 from pyppeteer import launch
@@ -44,7 +45,7 @@ HEADER2 = '''
     <g transform="scale(1, -1) translate(0, -900)">
 '''
 
-IMAGE_TPL = '<image x="%d" y="%d" width="%d" height="%d" xlink:href="%s" />'
+IMAGE_TPL = '<svg x="%d" y="%d" width="%d" height="%d">%s</svg>'
 
 FOOTER = '''
     </g>
@@ -73,20 +74,15 @@ def load_dictionary(dictionary_txt_path):
 
 class ImageGenerator:
 
-    def __init__(self, image_cache, P):
-        self.image_cache = image_cache
+    def __init__(self, P):
         self.P = P
 
     def get_image(self, C, strokes, img_num, skip_strokes, stop_at):
 
-        fname = TMPDIR + C + '%d-%d-%d.svg' % (img_num, skip_strokes, stop_at)
-        fname = os.path.abspath(fname)
-        if fname in self.image_cache:
-            return fname
-
         add_text = self.P[C]
 
-        with open(fname, 'w', encoding='utf8') as f:
+        with io.StringIO() as f:
+
             f.write(''.join([HEADER, '<text x="50" y="200" font-size="150px">',
                             add_text, '</text>', HEADER2]))
             for n, stroke in enumerate(strokes):
@@ -97,8 +93,7 @@ class ImageGenerator:
                 line_size = (20 if n - 1 < img_num else 10)
                 f.write(PATH_TPL % (stroke, line_size))
             f.write(FOOTER)
-        self.image_cache.append(fname)
-        return fname
+            return f.getvalue()
 
 
 def gen_images(input_characters, image_generator, strokes_db, num_repeats):
@@ -128,7 +123,7 @@ def gen_svg(size, header, gen_images_iter):
             f.write('<text x="0" y="7" font-size="5px">%s</text>' % header)
             for i in range(num_per_row * (num_rows - 1)):
                 try:
-                    fname = next(gen_images_iter)
+                    text = next(gen_images_iter)
                 except StopIteration:
                     keep_going = False
                     break
@@ -136,7 +131,7 @@ def gen_svg(size, header, gen_images_iter):
                 y = ((i // num_per_row) + 1) * size
                 if ((i // num_per_row) + 3) > num_rows:
                     break
-                f.write(IMAGE_TPL % (x, y, size, size, fname))
+                f.write(IMAGE_TPL % (x, y, size, size, text))
             f.write(FOOTER_SINGLE)
     return fpaths
 
@@ -176,8 +171,7 @@ class DrawStrokes:
     def __init__(self, graphics_txt_path, dictionary_txt_path):
         self.strokes_db = load_strokes_db(graphics_txt_path)
         self.P = load_dictionary(dictionary_txt_path)
-        self.image_cache = []
-        self.image_generator = ImageGenerator(self.image_cache, self.P)
+        self.image_generator = ImageGenerator(self.P)
 
     async def draw(self, input_characters, size, num_repeats):
 
