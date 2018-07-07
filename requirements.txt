@@ -1,5 +1,3 @@
-pyppeteer
 quart
 requests
-nose
 pypdf2

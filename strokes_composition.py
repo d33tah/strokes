@@ -14,7 +14,6 @@ with open('alt_forms.json') as f:
     alt_forms = json.loads(f.read())
 
 
-
 def try_uniname(x):
     try:
         return unicodedata.name(x)

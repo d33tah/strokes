@@ -1,40 +1,11 @@
 FROM ubuntu:18.04
 
-###########################################################################
-#
-# pyppeteer + Chrome installation
-#
-###########################################################################
-
-RUN apt-get update && apt-get install -y python3-pip graphviz
-
-RUN pip3 install pyppeteer
-
-RUN apt update && apt install -y libasound2 libatk-bridge2.0-0 libatk1.0-0 \
-    libc6 libcairo2 libcups2 libdbus-1-3 libexpat1 libgcc1 libgdk-pixbuf2.0-0 \
-    libglib2.0-0 libgtk-3-0 libnspr4 libnss3 libpango-1.0-0 \
-    libpangocairo-1.0-0 libx11-6 libx11-xcb1 libxcb1 libxcomposite1 \
-    libxcursor1 libxdamage1 libxext6 libxfixes3 libxi6 libxrandr2 \
-    libxrender1 libxss1 libxtst6 bash xdg-utils
-
-RUN groupadd chrome && useradd -g chrome -s /bin/bash -G audio,video chrome \
-    && mkdir -p /home/chrome && chown -R chrome:chrome /home/chrome
-
-RUN apt-get update && apt-get install -y fonts-noto-cjk locales wget
-
-USER chrome
-RUN python3 -c '__import__("pyppeteer.chromium_downloader").chromium_downloader.download_chromium()'
-USER root
-
-###########################################################################
-#
-# End of pyppeteer + Chrome installation
-#
-###########################################################################
+RUN apt-get update && apt-get install -y fonts-noto-cjk locales wget python3-pip
+RUN useradd strokes
 
 # we need to be able to read argv in UTF8 - in order to do that, we need
 # utf8 locale
-RUN locale-gen en_US.UTF-8
+RUN apt-get update && apt-get install -y locales && locale-gen en_US.UTF-8
 ENV LC_ALL=en_US.UTF-8
 
 RUN wget -nv https://github.com/skishore/makemeahanzi/blob/master/graphics.txt?raw=true -O/tmp/graphics.txt
@@ -50,8 +21,7 @@ ADD ./alt_forms.json /tmp/
 ADD ./all_definitions.json /tmp/
 RUN chmod +x /tmp/strokes.py
 
-USER chrome
+USER strokes
 WORKDIR /tmp
 RUN mkdir /tmp/imagecache
-RUN nosetests strokes.py
 CMD QUART_APP=/tmp/strokes.py quart run -h 0.0.0.0

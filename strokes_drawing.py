@@ -1,13 +1,13 @@
 import json
 import os
-import threading
 import random
 import logging
 import uuid
 import io
+import requests
+import base64
 
 
-from pyppeteer import launch
 from PyPDF2 import PdfFileMerger
 
 
@@ -97,10 +97,10 @@ def gen_images(P, input_characters, strokes_db, num_repeats):
         num_strokes = len(strokes)
         for i in range(num_strokes):
             for _ in range(num_repeats):
-                yield generate_image(P,C, strokes, i, 0, 99)
+                yield generate_image(P, C, strokes, i, 0, 99)
     for i in range(10):
         C = random.choice(input_characters)
-        yield generate_image(P,C, [], 0, 0, 0)
+        yield generate_image(P, C, [], 0, 0, 0)
 
 
 def gen_svg(size, header, gen_images_iter):
@@ -125,24 +125,18 @@ def gen_svg(size, header, gen_images_iter):
                 if ((i // num_per_row) + 3) > num_rows:
                     break
                 f.write(IMAGE_TPL % (x, y, size, size, text))
+            f.write('<text x="0" y="7" font-size="5px">%s</text>' % header)
             f.write(FOOTER_SINGLE)
     return fpaths
 
 
-async def start_browser():
-    # this lets us work without CAP_SYS_ADMIN:
-    options = {'args': ['--no-sandbox']}
-    # HACK: we're disabling signals because they fail in system tests
-    if threading.currentThread() != threading._main_thread:
-        options.update({'handleSIGINT': False, 'handleSIGHUP': False,
-                        'handleSIGTERM': False})
-    return await launch(**options)
-
-
-async def gen_pdf(browser, infile, outfile):
-    page = await browser.newPage()
-    await page.goto('file://%s' % infile)
-    await page.pdf({'path': outfile})
+async def gen_pdf(infile, outfile):
+    with open(outfile, 'wb') as f:
+        with open(infile, "rb") as f_read:
+            data = f_read.read()
+        datauri = 'data:image/svg+xml;base64,' + base64.b64encode(data).decode('ascii')
+        resp = requests.post('http://html2pdf:5000/html2pdf', {'url': datauri})
+        f.write(resp.content)
 
 
 def join_pdfs(pdfs, outpath=None):
@@ -177,15 +171,13 @@ async def draw(graphics_txt_path, dictionary_txt_path, input_characters,
     svg_paths = gen_svg(size, header, gen_images_iter)
 
     LOGGER.error('Generating pdfs...')
-    browser = await start_browser()
     pdf_paths = []
     for n, svg_path in enumerate(svg_paths):
         pdf_path = base_path + str(n) + '.pdf'
         pdf_paths.append(pdf_path)
-        await gen_pdf(browser, svg_path, pdf_path)
+        await gen_pdf(svg_path, pdf_path)
         #os.unlink(svg_path)
 
     out_pdf_path = join_pdfs(pdf_paths, out_path)
-    await browser.close()
 
     return out_pdf_path

@@ -1,0 +1,15 @@
+version: '3'
+services:
+
+    server:
+        build:
+            context: .
+        links:
+            - html2pdf:html2pdf
+        expose:
+            - 5000
+        ports:
+            - "5000:5000"
+
+    html2pdf:
+        image: d33tah/html2pdf

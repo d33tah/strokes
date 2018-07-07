@@ -34,11 +34,8 @@ from strokes_drawing import draw
 from strokes_composition import write_dot_to_file
 
 # those imports are for testing purposes:
-import unittest
-import multiprocessing
 import time
 import hashlib
-import requests
 
 app = Quart(__name__)
 
@@ -97,33 +94,3 @@ def index():
         <input type="submit" value="Generate strokes">
     </form>
     '''
-
-
-class SystemTest(unittest.TestCase):
-
-    def setUp(self):
-        self.server_thread = multiprocessing.Process(target=lambda: app.run())
-        self.server_thread.start()
-        time.sleep(1.0)
-
-    def tearDown(self):
-        requests.post(self.get_server_url() + '/' + SHUTDOWN_CODE, {})
-        self.server_thread.terminate()
-        self.server_thread.join()
-
-    def get_server_url(self):
-        return 'http://localhost:5000'
-
-    def test_server_is_up_and_running(self):
-        response = requests.get(self.get_server_url())
-        self.assertEqual(response.status_code, 200)
-
-    def test_gen_strokes_nihao_200(self):
-        response = requests.post(self.get_server_url() + '/gen_strokes',
-                                 {'chars': '你好', 'size': '10'})
-        self.assertEqual(response.status_code, 200)
-
-    def test_gen_composition_nihao_200(self):
-        response = requests.post(self.get_server_url() + '/gen_composition',
-                                 {'chars': '你好', 'size': '10'})
-        self.assertEqual(response.status_code, 200)
