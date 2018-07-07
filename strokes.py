@@ -25,7 +25,6 @@ TODO:
 ------------------------------------------------------------------------------
 '''
 
-import asyncio
 import base64
 import io
 import json
@@ -33,7 +32,6 @@ import logging
 import os
 import random
 import requests
-import subprocess
 import uuid
 
 
@@ -106,7 +104,11 @@ def load_dictionary(dictionary_txt_path):
     return d
 
 
-def generate_image(P, C, strokes, img_num, skip_strokes, stop_at):
+STROKES_DB = load_strokes_db('graphics.txt')
+P = load_dictionary('dictionary.txt')
+
+
+def generate_image(C, strokes, img_num, skip_strokes, stop_at):
 
     add_text = P[C]
 
@@ -125,19 +127,16 @@ def generate_image(P, C, strokes, img_num, skip_strokes, stop_at):
         return f.getvalue()
 
 
-def gen_images(P, input_characters, strokes_db, num_repeats):
+def gen_images(input_characters, num_repeats):
     for C in input_characters:
-        strokes = strokes_db[C]
+        strokes = STROKES_DB[C]
         num_strokes = len(strokes)
         for i in range(num_strokes):
-            #for _ in range(num_repeats):
-            #    yield generate_image(P,C, strokes, i, 0, i+1)
             for _ in range(num_repeats):
-                #yield generate_image(P,C, strokes, 0, i + 1, 99)
-                yield generate_image(P, C, strokes, i, 0, 99)
+                yield generate_image(C, strokes, i, 0, 99)
     for i in range(10):
         C = random.choice(input_characters)
-        yield generate_image(P, C, [], 0, 0, 0)
+        yield generate_image(C, [], 0, 0, 0)
 
 
 def gen_svg(size, header, gen_images_iter):
@@ -169,8 +168,8 @@ def gen_svg(size, header, gen_images_iter):
 async def gen_pdf(infile, outfile):
     with open(outfile, 'wb') as f:
         with open(infile, "rb") as f_read:
-            data = f_read.read()
-        datauri = 'data:image/svg+xml;base64,' + base64.b64encode(data).decode('ascii')
+            data_b64 = base64.b64encode(f_read.read()).decode('ascii')
+        datauri = 'data:image/svg+xml;base64,' + data_b64
         resp = requests.post('http://html2pdf:5000/html2pdf', {'url': datauri})
         f.write(resp.content)
 
@@ -188,16 +187,11 @@ def join_pdfs(pdfs, outpath=None):
     return outpath
 
 
-async def draw(graphics_txt_path, dictionary_txt_path, input_characters,
-               size, num_repeats):
-
-    strokes_db = load_strokes_db(graphics_txt_path)
-    P = load_dictionary(dictionary_txt_path)
+async def draw(input_characters, size, num_repeats):
 
     LOGGER.info('Generating SVG...')
 
-    gen_images_iter = iter(gen_images(P, input_characters, strokes_db,
-                                      num_repeats))
+    gen_images_iter = iter(gen_images(input_characters, num_repeats))
 
     header = ', '.join('%s (%s)' % (c, P[c])
                        for c in input_characters)
@@ -225,8 +219,7 @@ async def gen_strokes():
     size = int(form.get('size') or 10)
     num_repetitions = int(form.get('nr') or 3)
     C = form.get('chars') or 'X'
-    out_path = await draw('graphics.txt', 'dictionary.txt', C, size,
-                          num_repetitions)
+    out_path = await draw(C, size, num_repetitions)
     with open(out_path, 'rb') as f:
         return Response(f.read(), mimetype='application/pdf')
 
