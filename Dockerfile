@@ -8,8 +8,6 @@ RUN wget -nv https://github.com/skishore/makemeahanzi/blob/master/dictionary.txt
 ADD ./requirements.txt /tmp
 RUN pip3 install -r /tmp/requirements.txt && rm /tmp/requirements.txt
 ADD ./strokes.py /tmp/
-ADD ./strokes_drawing.py /tmp/
-ADD ./strokes_composition.py /tmp/
 ADD ./wiktionary-data.json /tmp/
 ADD ./alt_forms.json /tmp/
 ADD ./all_definitions.json /tmp/
