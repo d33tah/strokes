@@ -17,4 +17,4 @@ RUN chmod +x /tmp/strokes.py
 
 WORKDIR /tmp
 RUN mkdir /tmp/imagecache
-CMD QUART_APP=/tmp/strokes.py quart run -h 0.0.0.0
+CMD FLASK_APP=/tmp/strokes.py flask run -h 0.0.0.0

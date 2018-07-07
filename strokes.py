@@ -38,9 +38,9 @@ import uuid
 from PyPDF2 import PdfFileMerger
 
 
-from quart import Quart, Response, request
+from flask import Flask, Response, request
 
-app = Quart(__name__)
+app = Flask(__name__)
 
 
 PAGE_SIZE = (200, 300)
@@ -165,7 +165,7 @@ def gen_svg(size, header, gen_images_iter):
     return fpaths
 
 
-async def gen_pdf(infile, outfile):
+def gen_pdf(infile, outfile):
     with open(outfile, 'wb') as f:
         with open(infile, "rb") as f_read:
             data_b64 = base64.b64encode(f_read.read()).decode('ascii')
@@ -187,7 +187,7 @@ def join_pdfs(pdfs, outpath=None):
     return outpath
 
 
-async def draw(input_characters, size, num_repeats):
+def draw(input_characters, size, num_repeats):
 
     LOGGER.info('Generating SVG...')
 
@@ -205,7 +205,7 @@ async def draw(input_characters, size, num_repeats):
     for n, svg_path in enumerate(svg_paths):
         pdf_path = base_path + str(n) + '.pdf'
         pdf_paths.append(pdf_path)
-        await gen_pdf(svg_path, pdf_path)
+        gen_pdf(svg_path, pdf_path)
         #os.unlink(svg_path)
 
     out_pdf_path = join_pdfs(pdf_paths, out_path)
@@ -214,12 +214,11 @@ async def draw(input_characters, size, num_repeats):
 
 
 @app.route('/gen_strokes', methods=['POST'])
-async def gen_strokes():
-    form = await request.form
-    size = int(form.get('size') or 10)
-    num_repetitions = int(form.get('nr') or 3)
-    C = form.get('chars') or 'X'
-    out_path = await draw(C, size, num_repetitions)
+def gen_strokes():
+    size = int(request.form.get('size') or 10)
+    num_repetitions = int(request.form.get('nr') or 3)
+    C = request.form.get('chars') or 'X'
+    out_path = draw(C, size, num_repetitions)
     with open(out_path, 'rb') as f:
         return Response(f.read(), mimetype='application/pdf')
 
