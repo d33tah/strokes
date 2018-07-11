@@ -131,10 +131,21 @@ def gen_images(input_characters, num_repeats):
     for C in input_characters:
         strokes = STROKES_DB[C]
         num_strokes = len(strokes)
-        for i in range(num_strokes):
+        for n in range(num_strokes):
+
+            # whole character, highlight n-th stroke
             for _ in range(num_repeats):
-                yield generate_image(C, strokes, i, 0, 99)
-    for i in range(10):
+                yield generate_image(C, strokes, n, 0, 99)
+
+            # draw n-th stroke alone
+            for _ in range(num_repeats):
+                yield generate_image(C, strokes, n, 0, n + 1)
+
+            # draw n-th stroke into context
+            for _ in range(num_repeats):
+                yield generate_image(C, strokes, n, n + 1, 99)
+
+    for i in range(num_repeats * len(input_characters)):
         C = random.choice(input_characters)
         yield generate_image(C, [], 0, 0, 0)
 
