@@ -108,13 +108,13 @@ STROKES_DB = load_strokes_db('graphics.txt')
 P = load_dictionary('dictionary.txt')
 
 
-def generate_image(C, strokes, img_num, skip_strokes, stop_at):
+def generate_image(C, strokes, img_num, skip_strokes, stop_at, add_pinyin=True):
 
-    add_text = P[C]
+    add_text = P[C] if add_pinyin else ''
 
     with io.StringIO() as f:
 
-        f.write(''.join([HEADER, '<text x="50" y="200" font-size="150px">',
+        f.write(''.join([HEADER, '<text x="50" y="950" font-size="300px">',
                         add_text, '</text>', HEADER2]))
         for n, stroke in enumerate(strokes):
             if n < skip_strokes or n >= stop_at:
@@ -133,36 +133,54 @@ def gen_images(input_characters, num_repeats):
         num_strokes = len(strokes)
         for n in range(num_strokes):
 
+            if num_repeats == 0:
+                yield C, generate_image(C, strokes, n, 0, 99, False)
+                continue
+
             # whole character, highlight n-th stroke
             for _ in range(num_repeats):
-                yield generate_image(C, strokes, n, 0, 99)
+                yield C, generate_image(C, strokes, n, 0, 99, False)
 
+
+            add_pinyin = n == 0
             # draw n-th stroke alone
             for _ in range(num_repeats):
-                yield generate_image(C, strokes, n, 0, n + 1)
+                yield C, generate_image(C, strokes, n, 0, n + 1, add_pinyin)
 
             # draw n-th stroke into context
             for _ in range(num_repeats):
-                yield generate_image(C, strokes, n, n + 1, 99)
+                yield C, generate_image(C, strokes, n, n + 1, 99, False)
 
     for i in range(num_repeats * len(input_characters)):
         C = random.choice(input_characters)
-        yield generate_image(C, [], 0, 0, 0)
+        yield C, generate_image(C, [], 0, 0, 0)
 
 
-def gen_svg(size, header, gen_images_iter):
+def gen_svg(size, gen_images_iter):
+
     fpaths = []
     keep_going = True
+    page_drawn = 0
     while keep_going:
+        page_drawn += 1
         fpath = os.path.join(TMPDIR, str(uuid.uuid4()) + '.svg')
         fpaths.append(os.path.abspath(fpath))
         with open(fpath, 'w') as f:
             num_per_row = PAGE_SIZE[0] // size
             num_rows = PAGE_SIZE[1] // size
             f.write(HEADER_SINGLE)
+            chars_drawn = []
+            header = ''
             for i in range(num_per_row * (num_rows - 1)):
                 try:
-                    text = next(gen_images_iter)
+                    C, text = next(gen_images_iter)
+                    if not chars_drawn or chars_drawn[-1] != C:
+                        chars_drawn.append(C)
+                        if header:
+                            header += ', '
+                        if len(header) > 75 and '<tspan' not in header[1:]:
+                            header += '</tspan><tspan x="0" dy="1.2em">'
+                        header += '%s (%s)' % (C, P[C])
                 except StopIteration:
                     keep_going = False
                     break
@@ -171,6 +189,11 @@ def gen_svg(size, header, gen_images_iter):
                 if ((i // num_per_row) + 3) > num_rows:
                     break
                 f.write(IMAGE_TPL % (x, y, size, size, text))
+
+            header = '<tspan x="0" dy="0em">%d: %s</tspan>' % (page_drawn, header)
+            if '<tspan>' in header[1:]:
+                header += '</tspan>'
+
             f.write('<text x="0" y="7" font-size="5px">%s</text>' % header)
             f.write(FOOTER_SINGLE)
     return fpaths
@@ -204,12 +227,9 @@ def draw(input_characters, size, num_repeats):
 
     gen_images_iter = iter(gen_images(input_characters, num_repeats))
 
-    header = ', '.join('%s (%s)' % (c, P[c])
-                       for c in input_characters)
-
     base_path = os.getcwd() + '/' + str(abs(hash(input_characters)))
     out_path = base_path + '.pdf'
-    svg_paths = gen_svg(size, header, gen_images_iter)
+    svg_paths = gen_svg(size, gen_images_iter)
 
     LOGGER.error('Generating pdfs...')
     pdf_paths = []
@@ -239,8 +259,9 @@ def index():
     return '''<!DOCTYPE HTML><html><body>
         <form action="/gen_strokes" method="post">
         <p>Characters: <input type="text" name="chars" value="你好"/></p>
-        <p>Size: <input type="text" name="size" value="10"/></p>
-        <p>Number of repetitions: <input type="text" name="nr" value="3"/></p>
+        <p>Size: <input type="text" name="size" value="15"/></p>
+        <p>Number of repetitions (0 means "no repetitions, try it out"):
+            <input type="text" name="nr" value="3"/></p>
         <input type="submit" value="Generate strokes">
     </form>
     '''
