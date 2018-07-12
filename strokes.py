@@ -16,7 +16,6 @@ TODO:
     * add print margins?
     * more options: how many repetitions of each stroke, how many characters
       does it take to switch to random mode?
-    * multi-page support: print title only for the current page
     * repetition mode: show two strokes at once?
     * make frontend cuter
     * custom titles
@@ -27,6 +26,7 @@ TODO:
 
 import base64
 import io
+import itertools
 import json
 import logging
 import os
@@ -84,6 +84,8 @@ FOOTER = '''
 </svg>
 '''
 
+CHUNK_SIZE = 4
+
 
 def load_strokes_db(graphics_txt_path):
     ret = {'X': []}
@@ -108,7 +110,8 @@ STROKES_DB = load_strokes_db('graphics.txt')
 P = load_dictionary('dictionary.txt')
 
 
-def generate_image(C, strokes, img_num, skip_strokes, stop_at, add_pinyin=True):
+def generate_image(C, strokes, img_num, skip_strokes, stop_at,
+                   add_pinyin=True):
 
     add_text = P[C] if add_pinyin else ''
 
@@ -127,33 +130,70 @@ def generate_image(C, strokes, img_num, skip_strokes, stop_at, add_pinyin=True):
         return f.getvalue()
 
 
+def grouper(iterable, n):
+    while True:
+        yield itertools.chain([next(iterable)],
+                              itertools.islice(iterable, n-1))
+
+
 def gen_images(input_characters, num_repeats):
-    for C in input_characters:
-        strokes = STROKES_DB[C]
-        num_strokes = len(strokes)
-        for n in range(num_strokes):
+    for chunk_iter in grouper(iter(input_characters), CHUNK_SIZE):
+        chunk = list(chunk_iter)
+        for C in chunk:
+            strokes = STROKES_DB[C]
+            num_strokes = len(strokes)
+            for n in range(num_strokes):
 
-            if num_repeats == 0:
-                yield C, generate_image(C, strokes, n, 0, 99, False)
-                continue
+                if num_repeats == 0:
+                    yield C, generate_image(C, strokes, n, 0, 99, False)
+                    continue
 
-            # whole character, highlight n-th stroke
-            for _ in range(num_repeats):
-                yield C, generate_image(C, strokes, n, 0, 99, False)
+                # draw n-th stroke alone
+                for j in range(num_repeats):
+                    # we only want to print pinyin on first repetition of first
+                    # stroke - this is when it's most likely its text won't
+                    # overlap at the bottom of the tile
+                    add_text = n == 0 and j == 0
+                    yield C, generate_image(C, strokes, n, 0, n + 1, add_text)
+
+                # whole character, highlight n-th stroke
+                for _ in range(num_repeats):
+                    yield C, generate_image(C, strokes, n, 0, 99, False)
+
+                # draw n-th stroke into context
+                for _ in range(num_repeats):
+                    yield C, generate_image(C, strokes, n, n + 1, 99, False)
+
+        repeats = chunk * num_repeats * 2
+        random.shuffle(repeats)
+        for C in repeats:
+            yield C, generate_image(C, [], 0, 0, 0)
 
 
-            add_pinyin = n == 0
-            # draw n-th stroke alone
-            for _ in range(num_repeats):
-                yield C, generate_image(C, strokes, n, 0, n + 1, add_pinyin)
+class Header:
 
-            # draw n-th stroke into context
-            for _ in range(num_repeats):
-                yield C, generate_image(C, strokes, n, n + 1, 99, False)
+    def __init__(self):
+        self.header = ''
+        self.chars_drawn = []
 
-    for i in range(num_repeats * len(input_characters)):
-        C = random.choice(input_characters)
-        yield C, generate_image(C, [], 0, 0, 0)
+    def observe_char(self, C):
+        if C in self.chars_drawn:
+            return
+        self.chars_drawn.append(C)
+        if self.header:
+            self.header += ', '
+        # header[1:] was chosen so that we don't catch first
+        # tspan.
+        if len(self.header) > 75 and '<tspan' not in self.header[1:]:
+            self.header += '</tspan><tspan x="0" dy="1.2em">'
+        self.header += '%s (%s)' % (C, P[C])
+
+    def get_text(self, page_drawn):
+        ret = '<tspan x="0" dy="0em">%d: %s</tspan>' % (page_drawn,
+                                                        self.header)
+        if '<tspan>' in self.header[1:]:
+            self.header += '</tspan>'
+        return ret
 
 
 def gen_svg(size, gen_images_iter):
@@ -169,18 +209,11 @@ def gen_svg(size, gen_images_iter):
             num_per_row = PAGE_SIZE[0] // size
             num_rows = PAGE_SIZE[1] // size
             f.write(HEADER_SINGLE)
-            chars_drawn = []
-            header = ''
+            hdr = Header()
             for i in range(num_per_row * (num_rows - 1)):
                 try:
                     C, text = next(gen_images_iter)
-                    if not chars_drawn or chars_drawn[-1] != C:
-                        chars_drawn.append(C)
-                        if header:
-                            header += ', '
-                        if len(header) > 75 and '<tspan' not in header[1:]:
-                            header += '</tspan><tspan x="0" dy="1.2em">'
-                        header += '%s (%s)' % (C, P[C])
+                    hdr.observe_char(C)
                 except StopIteration:
                     keep_going = False
                     break
@@ -190,11 +223,8 @@ def gen_svg(size, gen_images_iter):
                     break
                 f.write(IMAGE_TPL % (x, y, size, size, text))
 
-            header = '<tspan x="0" dy="0em">%d: %s</tspan>' % (page_drawn, header)
-            if '<tspan>' in header[1:]:
-                header += '</tspan>'
-
-            f.write('<text x="0" y="7" font-size="5px">%s</text>' % header)
+            header = hdr.get_text(page_drawn)
+            f.write('<text x="0" y="5" font-size="5px">%s</text>' % header)
             f.write(FOOTER_SINGLE)
     return fpaths
 
@@ -237,7 +267,7 @@ def draw(input_characters, size, num_repeats):
         pdf_path = base_path + str(n) + '.pdf'
         pdf_paths.append(pdf_path)
         gen_pdf(svg_path, pdf_path)
-        #os.unlink(svg_path)
+        os.unlink(svg_path)
 
     out_pdf_path = join_pdfs(pdf_paths, out_path)
 
@@ -260,7 +290,7 @@ def index():
         <form action="/gen_strokes" method="post">
         <p>Characters: <input type="text" name="chars" value="你好"/></p>
         <p>Size: <input type="text" name="size" value="15"/></p>
-        <p>Number of repetitions (0 means "no repetitions, try it out"):
+        <p>Number of repetitions (0 means "no repetitions", try it out):
             <input type="text" name="nr" value="3"/></p>
         <input type="submit" value="Generate strokes">
     </form>
