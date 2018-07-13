@@ -13,6 +13,7 @@ Requires downloading the following files:
 
 TODO:
 
+    * better error reporting
     * add print margins?
     * more options: how many repetitions of each stroke, how many characters
       does it take to switch to random mode?
