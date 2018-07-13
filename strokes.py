@@ -103,7 +103,7 @@ class Tile:
     '''
 
     def __init__(self, C, strokes, img_num, skip_strokes, stop_at,
-                 add_pinyin=True):
+                 add_pinyin=True, skip_in_header=False):
 
         self.C = C
         self.strokes = strokes
@@ -111,6 +111,7 @@ class Tile:
         self.skip_strokes = skip_strokes
         self.stop_at = stop_at
         self.add_pinyin = add_pinyin
+        self.skip_in_header = skip_in_header
 
     def __str__(self):
 
@@ -169,7 +170,7 @@ def gen_images(input_characters, num_repeats):
         repeats = chunk * num_repeats * 2
         random.shuffle(repeats)
         for C in repeats:
-            yield Tile(C, [], 0, 0, 0)
+            yield Tile(C, [], 0, 0, 0, skip_in_header=True)
 
 
 class Header:
@@ -197,14 +198,13 @@ class Header:
                                                         self.header)
         if '<tspan>' in self.header[1:]:
             self.header += '</tspan>'
-        return ret
+        return '<text x="0" y="5" font-size="5px">%s</text>' % ret
 
 
 class PageLayout:
 
-    HEADER_SINGLE = '''
-    <svg width="100%%" height="100%%" viewBox="0 0 %d %d" version="1.1"
-    xmlns="http://www.w3.org/2000/svg"
+    HEADER_SINGLE = '''<svg width="100%%" height="100%%" viewBox="0 0 %d %d"
+    version="1.1" xmlns="http://www.w3.org/2000/svg"
     xmlns:xlink="http://www.w3.org/1999/xlink">''' % PAGE_SIZE
 
     FOOTER_SINGLE = '</svg>'
@@ -214,38 +214,42 @@ class PageLayout:
     def __init__(self, size, gen_images_iter):
         self.size = size
         self.gen_images_iter = gen_images_iter
+        self.keep_going = True
+        self.page_drawn = 0
+
+    def write_page(self, f):
+        num_per_row = PAGE_SIZE[0] // self.size
+        num_rows = PAGE_SIZE[1] // self.size
+        f.write(self.HEADER_SINGLE)
+        hdr = Header()
+        for i in range(num_per_row * (num_rows - 1)):
+            try:
+                tile = next(self.gen_images_iter)
+                if not tile.skip_in_header:
+                    hdr.observe_char(tile.C)
+            except StopIteration:
+                self.keep_going = False
+                break
+            x = (i % num_per_row) * self.size
+            y = ((i // num_per_row) + 1) * self.size
+            if ((i // num_per_row) + 3) > num_rows:
+                break
+            f.write(self.IMAGE_TPL % (x, y, self.size,
+                                      self.size, str(tile)))
+
+        f.write(hdr.get_text(self.page_drawn))
+        f.write(self.FOOTER_SINGLE)
+
 
     def gen_svg(self):
 
         fpaths = []
-        keep_going = True
-        page_drawn = 0
-        while keep_going:
-            page_drawn += 1
+        while self.keep_going:
+            self.page_drawn += 1
             fpath = os.path.join(TMPDIR, str(uuid.uuid4()) + '.svg')
             fpaths.append(os.path.abspath(fpath))
             with open(fpath, 'w') as f:
-                num_per_row = PAGE_SIZE[0] // self.size
-                num_rows = PAGE_SIZE[1] // self.size
-                f.write(self.HEADER_SINGLE)
-                hdr = Header()
-                for i in range(num_per_row * (num_rows - 1)):
-                    try:
-                        tile = next(self.gen_images_iter)
-                        hdr.observe_char(tile.C)
-                    except StopIteration:
-                        keep_going = False
-                        break
-                    x = (i % num_per_row) * self.size
-                    y = ((i // num_per_row) + 1) * self.size
-                    if ((i // num_per_row) + 3) > num_rows:
-                        break
-                    f.write(self.IMAGE_TPL % (x, y, self.size,
-                                              self.size, str(tile)))
-
-                header = hdr.get_text(page_drawn)
-                f.write('<tile x="0" y="5" font-size="5px">%s</tile>' % header)
-                f.write(self.FOOTER_SINGLE)
+                self.write_page(f)
         return fpaths
 
 
