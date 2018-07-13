@@ -25,14 +25,13 @@ TODO:
 '''
 
 import base64
+import collections
 import io
 import itertools
 import json
 import logging
-import os
 import random
 import requests
-import uuid
 
 
 from PyPDF2 import PdfFileMerger
@@ -44,7 +43,6 @@ app = Flask(__name__)
 PAGE_SIZE = (200, 300)
 LOGGER = logging.getLogger(__name__)
 CURRENT_FILE = __file__ if '__file__' in globals() else ''
-TMPDIR = '%s/imagecache/' % os.path.dirname(os.path.abspath(CURRENT_FILE))
 CHUNK_SIZE = 4
 
 
@@ -222,14 +220,15 @@ class Page:
     FOOTER_SINGLE = '</svg>'
 
     def __init__(self, page_drawn, tile_size, gen_images_iter):
-        self.fpath = os.path.join(TMPDIR, str(uuid.uuid4()) + '.svg')
         self.page_drawn = page_drawn
-        self.tiles = []
+        self.tiles = collections.defaultdict(dict)
         self.num_per_row = PAGE_SIZE[0] // tile_size
         self.num_rows = PAGE_SIZE[1] // tile_size
         self.hdr = Header()
         self.tile_size = tile_size
         self.gen_images_iter = gen_images_iter
+        self.f = io.StringIO()
+        self.rendered = ''
 
     def write_tiles(self, f):
         for i in range(self.num_per_row * (self.num_rows - 1)):
@@ -239,25 +238,28 @@ class Page:
                     self.hdr.observe_char(tile.C)
             except StopIteration:
                 return False
-            x = (i % self.num_per_row) * self.tile_size
-            y = ((i // self.num_per_row) + 1) * self.tile_size
+            row_num = (i % self.num_per_row)
+            x = row_num * self.tile_size
+            col_num = ((i // self.num_per_row) + 1)
+            y = col_num * self.tile_size
             if ((i // self.num_per_row) + 3) > self.num_rows:
                 break
             tile.set_dimensions(x, y, self.tile_size)
-            self.tiles.append(tile)
+            self.tiles[row_num][col_num] = tile
             f.write(tile.render())
         return True
 
     def prepare(self):
 
-        with open(self.fpath, 'w') as f:
-            f.write(self.HEADER_SINGLE)
-            try:
-                if self.write_tiles(f):
-                    return False
-            finally:
-                f.write(self.hdr.get_text(self.page_drawn))
-                f.write(self.FOOTER_SINGLE)
+        self.f.write(self.HEADER_SINGLE)
+        try:
+            if not self.write_tiles(self.f):
+                return False
+        finally:
+            self.f.write(self.hdr.get_text(self.page_drawn))
+            self.f.write(self.FOOTER_SINGLE)
+            self.f.seek(0)
+        return True
 
 
 def gen_svg(size, gen_images_iter):
@@ -273,26 +275,29 @@ def gen_svg(size, gen_images_iter):
     return pages
 
 
-def gen_pdf(infile, outfile):
-    with open(outfile, 'wb') as f:
-        with open(infile, "rb") as f_read:
-            data_b64 = base64.b64encode(f_read.read()).decode('ascii')
-        datauri = 'data:image/svg+xml;base64,' + data_b64
-        resp = requests.post('http://html2pdf:5000/html2pdf', {'url': datauri})
-        f.write(resp.content)
+def gen_pdf(svg_code):
+    data_b64 = base64.b64encode(svg_code.encode('utf8')).decode('ascii')
+    datauri = 'data:image/svg+xml;base64,' + data_b64
+    resp = requests.post('http://html2pdf:5000/html2pdf', {'url': datauri})
+    return resp.content
 
 
-def join_pdfs(pdfs, outpath=None):
+def join_pages(pdfs, outpath=None):
 
     merger = PdfFileMerger()
+    pdf_files = []
+    try:
+        for pdf in pdfs:
+            pdf_f = io.BytesIO(pdf)
+            pdf_files.append(pdf_f)
+            merger.append(pdf_f)
 
-    for pdf in pdfs:
-        merger.append(open(pdf, 'rb'))
-
-    outpath = outpath or os.path.join(TMPDIR, str(uuid.uuid4()) + '.pdf')
-    with open(outpath, 'wb') as fout:
-        merger.write(fout)
-    return outpath
+        with io.BytesIO() as fout:
+            merger.write(fout)
+            return fout.getvalue()
+    finally:
+        for pdf_f in pdf_files:
+            pdf_f.close()
 
 
 def draw(input_characters, size, num_repeats):
@@ -301,22 +306,14 @@ def draw(input_characters, size, num_repeats):
 
     gen_images_iter = iter(gen_images(input_characters, num_repeats))
 
-    base_path = os.getcwd() + '/' + str(abs(hash(input_characters)))
-    out_path = base_path + '.pdf'
     pages = gen_svg(size, gen_images_iter)
 
     LOGGER.error('Generating pdfs...')
-    pdf_paths = []
+    pdfs = []
     for n, page in enumerate(pages):
-        svg_path = page.fpath
-        pdf_path = base_path + str(n) + '.pdf'
-        pdf_paths.append(pdf_path)
-        gen_pdf(svg_path, pdf_path)
-        os.unlink(svg_path)
+        pdfs.append(gen_pdf(page.f.getvalue()))
 
-    out_pdf_path = join_pdfs(pdf_paths, out_path)
-
-    return out_pdf_path
+    return join_pages(pdfs)
 
 
 @app.route('/gen_strokes', methods=['POST'])
@@ -324,9 +321,7 @@ def gen_strokes():
     size = int(request.form.get('size') or 10)
     num_repetitions = int(request.form.get('nr') or 3)
     C = request.form.get('chars') or 'X'
-    out_path = draw(C, size, num_repetitions)
-    with open(out_path, 'rb') as f:
-        return Response(f.read(), mimetype='application/pdf')
+    return Response(draw(C, size, num_repetitions), mimetype='application/pdf')
 
 
 @app.route('/')
