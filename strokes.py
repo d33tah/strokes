@@ -36,8 +36,6 @@ import uuid
 
 
 from PyPDF2 import PdfFileMerger
-
-
 from flask import Flask, Response, request
 
 app = Flask(__name__)
@@ -47,43 +45,6 @@ PAGE_SIZE = (200, 300)
 LOGGER = logging.getLogger(__name__)
 CURRENT_FILE = __file__ if '__file__' in globals() else ''
 TMPDIR = '%s/imagecache/' % os.path.dirname(os.path.abspath(CURRENT_FILE))
-
-
-HEADER_SINGLE = '''
-<svg width="100%%" height="100%%" viewBox="0 0 %d %d" version="1.1"
-xmlns="http://www.w3.org/2000/svg"
-xmlns:xlink="http://www.w3.org/1999/xlink">''' % PAGE_SIZE
-
-PATH_TPL = '<path d="%s" stroke="black" stroke-width="%d" fill="white"></path>'
-
-FOOTER_SINGLE = '</svg>'
-
-
-HEADER = '''
-<svg version="1.1" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
-'''
-
-HEADER2 = '''
-    <g stroke="black" stroke-width="2" transform="scale(4, 4)">
-        <line x1="0" y1="0" x2="0" y2="256" stroke-width="10"></line>
-        <line x1="0" y1="0" x2="256" y2="256"></line>
-        <line x1="256" y1="0" x2="0" y2="256"></line>
-        <line x1="256" y1="0" x2="0" y2="0" stroke-width="10"></line>
-        <line x1="256" y1="0" x2="256" y2="256"></line>
-        <line x1="128" y1="0" x2="128" y2="256"></line>
-        <line x1="0" y1="128" x2="256" y2="128"></line>
-        <line x1="0" y1="256" x2="256" y2="256"></line>
-    </g>
-    <g transform="scale(1, -1) translate(0, -900)">
-'''
-
-IMAGE_TPL = '<svg x="%d" y="%d" width="%d" height="%d">%s</svg>'
-
-FOOTER = '''
-    </g>
-</svg>
-'''
-
 CHUNK_SIZE = 4
 
 
@@ -110,24 +71,65 @@ STROKES_DB = load_strokes_db('graphics.txt')
 P = load_dictionary('dictionary.txt')
 
 
-def generate_image(C, strokes, img_num, skip_strokes, stop_at,
-                   add_pinyin=True):
+class Tile:
+    """Class responsible for preparing SVG code describing a single tine.
 
-    add_text = P[C] if add_pinyin else ''
+    The reason it exists right now is because otherwise I would have to
+    additionally hold 'C' variable and I plan to keep more data here."""
 
-    with io.StringIO() as f:
+    SVG_HEADER = '''<svg version="1.1" viewBox="0 0 1024 1024"
+        xmlns="http://www.w3.org/2000/svg">'''
 
-        f.write(''.join([HEADER, '<text x="50" y="950" font-size="300px">',
-                        add_text, '</text>', HEADER2]))
-        for n, stroke in enumerate(strokes):
-            if n < skip_strokes or n >= stop_at:
-                continue
-            # IMHO this can safely be hardcoded because it's relative
-            # to this image
-            line_size = (20 if n - 1 < img_num else 10)
-            f.write(PATH_TPL % (stroke, line_size))
-        f.write(FOOTER)
-        return f.getvalue()
+    PREAMBLE = '''
+        <g stroke="black" stroke-width="2" transform="scale(4, 4)">
+            <line x1="0" y1="0" x2="0" y2="256" stroke-width="10"></line>
+            <line x1="0" y1="0" x2="256" y2="256"></line>
+            <line x1="256" y1="0" x2="0" y2="256"></line>
+            <line x1="256" y1="0" x2="0" y2="0" stroke-width="10"></line>
+            <line x1="256" y1="0" x2="256" y2="256"></line>
+            <line x1="128" y1="0" x2="128" y2="256"></line>
+            <line x1="0" y1="128" x2="256" y2="128"></line>
+            <line x1="0" y1="256" x2="256" y2="256"></line>
+        </g>
+        <g transform="scale(1, -1) translate(0, -900)">
+    '''
+
+    PATH_TPL = '''<path d="%s" stroke="black" stroke-width="%d"
+        fill="white"></path>'''
+
+    FOOTER = '''
+        </g>
+    </svg>
+    '''
+
+    def __init__(self, C, strokes, img_num, skip_strokes, stop_at,
+                 add_pinyin=True):
+
+        self.C = C
+        self.strokes = strokes
+        self.img_num = img_num
+        self.skip_strokes = skip_strokes
+        self.stop_at = stop_at
+        self.add_pinyin = add_pinyin
+
+    def __str__(self):
+
+        add_text = P[self.C] if self.add_pinyin else ''
+        add_text_svg = ('''<text x="50" y="950"
+            font-size="300px">%s</text>''' % add_text)
+
+        with io.StringIO() as f:
+
+            f.write(''.join([self.SVG_HEADER, add_text_svg, self.PREAMBLE]))
+            for n, stroke in enumerate(self.strokes):
+                if n < self.skip_strokes or n >= self.stop_at:
+                    continue
+                # IMHO this can safely be hardcoded because it's relative
+                # to this image
+                line_size = (20 if n - 1 < self.img_num else 10)
+                f.write(self.PATH_TPL % (stroke, line_size))
+            f.write(self.FOOTER)
+            return f.getvalue()
 
 
 def grouper(iterable, n):
@@ -145,7 +147,7 @@ def gen_images(input_characters, num_repeats):
             for n in range(num_strokes):
 
                 if num_repeats == 0:
-                    yield C, generate_image(C, strokes, n, 0, 99, False)
+                    yield Tile(C, strokes, n, 0, 99, False)
                     continue
 
                 # draw n-th stroke alone
@@ -154,23 +156,25 @@ def gen_images(input_characters, num_repeats):
                     # stroke - this is when it's most likely its text won't
                     # overlap at the bottom of the tile
                     add_text = n == 0 and j == 0
-                    yield C, generate_image(C, strokes, n, 0, n + 1, add_text)
+                    yield Tile(C, strokes, n, 0, n + 1, add_text)
 
                 # whole character, highlight n-th stroke
                 for _ in range(num_repeats):
-                    yield C, generate_image(C, strokes, n, 0, 99, False)
+                    yield Tile(C, strokes, n, 0, 99, False)
 
                 # draw n-th stroke into context
                 for _ in range(num_repeats):
-                    yield C, generate_image(C, strokes, n, n + 1, 99, False)
+                    yield Tile(C, strokes, n, n + 1, 99, False)
 
         repeats = chunk * num_repeats * 2
         random.shuffle(repeats)
         for C in repeats:
-            yield C, generate_image(C, [], 0, 0, 0)
+            yield Tile(C, [], 0, 0, 0)
 
 
 class Header:
+    """The responsibility of this class is to manage the header - i.e. make
+    sure it's split into two lines."""
 
     def __init__(self):
         self.header = ''
@@ -196,37 +200,53 @@ class Header:
         return ret
 
 
-def gen_svg(size, gen_images_iter):
+class PageLayout:
 
-    fpaths = []
-    keep_going = True
-    page_drawn = 0
-    while keep_going:
-        page_drawn += 1
-        fpath = os.path.join(TMPDIR, str(uuid.uuid4()) + '.svg')
-        fpaths.append(os.path.abspath(fpath))
-        with open(fpath, 'w') as f:
-            num_per_row = PAGE_SIZE[0] // size
-            num_rows = PAGE_SIZE[1] // size
-            f.write(HEADER_SINGLE)
-            hdr = Header()
-            for i in range(num_per_row * (num_rows - 1)):
-                try:
-                    C, text = next(gen_images_iter)
-                    hdr.observe_char(C)
-                except StopIteration:
-                    keep_going = False
-                    break
-                x = (i % num_per_row) * size
-                y = ((i // num_per_row) + 1) * size
-                if ((i // num_per_row) + 3) > num_rows:
-                    break
-                f.write(IMAGE_TPL % (x, y, size, size, text))
+    HEADER_SINGLE = '''
+    <svg width="100%%" height="100%%" viewBox="0 0 %d %d" version="1.1"
+    xmlns="http://www.w3.org/2000/svg"
+    xmlns:xlink="http://www.w3.org/1999/xlink">''' % PAGE_SIZE
 
-            header = hdr.get_text(page_drawn)
-            f.write('<text x="0" y="5" font-size="5px">%s</text>' % header)
-            f.write(FOOTER_SINGLE)
-    return fpaths
+    FOOTER_SINGLE = '</svg>'
+
+    IMAGE_TPL = '<svg x="%d" y="%d" width="%d" height="%d">%s</svg>'
+
+    def __init__(self, size, gen_images_iter):
+        self.size = size
+        self.gen_images_iter = gen_images_iter
+
+    def gen_svg(self):
+
+        fpaths = []
+        keep_going = True
+        page_drawn = 0
+        while keep_going:
+            page_drawn += 1
+            fpath = os.path.join(TMPDIR, str(uuid.uuid4()) + '.svg')
+            fpaths.append(os.path.abspath(fpath))
+            with open(fpath, 'w') as f:
+                num_per_row = PAGE_SIZE[0] // self.size
+                num_rows = PAGE_SIZE[1] // self.size
+                f.write(self.HEADER_SINGLE)
+                hdr = Header()
+                for i in range(num_per_row * (num_rows - 1)):
+                    try:
+                        tile = next(self.gen_images_iter)
+                        hdr.observe_char(tile.C)
+                    except StopIteration:
+                        keep_going = False
+                        break
+                    x = (i % num_per_row) * self.size
+                    y = ((i // num_per_row) + 1) * self.size
+                    if ((i // num_per_row) + 3) > num_rows:
+                        break
+                    f.write(self.IMAGE_TPL % (x, y, self.size,
+                                              self.size, str(tile)))
+
+                header = hdr.get_text(page_drawn)
+                f.write('<tile x="0" y="5" font-size="5px">%s</tile>' % header)
+                f.write(self.FOOTER_SINGLE)
+        return fpaths
 
 
 def gen_pdf(infile, outfile):
@@ -259,7 +279,7 @@ def draw(input_characters, size, num_repeats):
 
     base_path = os.getcwd() + '/' + str(abs(hash(input_characters)))
     out_path = base_path + '.pdf'
-    svg_paths = gen_svg(size, gen_images_iter)
+    svg_paths = PageLayout(size, gen_images_iter).gen_svg()
 
     LOGGER.error('Generating pdfs...')
     pdf_paths = []
