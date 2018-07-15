@@ -1,6 +1,20 @@
 #!/usr/bin/env python3
 
-'''
+import base64
+import collections
+import io
+import itertools
+import json
+import logging
+import random
+import unittest
+
+import requests
+
+from PyPDF2 import PdfFileMerger
+from flask import Flask, Response, request
+
+__doc__ = '''
 Generates a file that can be used for learning how to write a specific
 Chinese character, when printed.
 
@@ -12,7 +26,7 @@ Requires downloading the following files:
     https://raw.githubusercontent.com/skishore/makemeahanzi/master/dictionary.txt
 '''
 
-'''
+__TODO__ = '''
 *** TODO ***
 
 Bugs:
@@ -41,19 +55,6 @@ Testing:
 
 ------------------------------------------------------------------------------
 '''
-
-import base64
-import collections
-import io
-import itertools
-import json
-import logging
-import random
-import requests
-import unittest
-
-from PyPDF2 import PdfFileMerger
-from flask import Flask, Response, request
 
 app = Flask(__name__)
 
@@ -324,7 +325,7 @@ def gen_pdfs(pages):
     merger = PdfFileMerger()
     pdf_files = []
     try:
-        for n, page in enumerate(pages):
+        for page in pages:
             pdf = gen_pdf(page.f.getvalue())
             pdf_f = io.BytesIO(pdf)
             pdf_files.append(pdf_f)
@@ -362,14 +363,12 @@ def draw(input_characters, size, num_repeats, action):
 
     if action == 'generate':
         return [gen_pdfs(pages)], {'mimetype': 'application/pdf'}
-    elif action == 'preview_small':
+    if action == 'preview_small':
         return [gen_html(pages)], {'mimetype': 'text/html'}
-    elif action == 'preview_large':
+    if action == 'preview_large':
         return [gen_html(pages, False)], {'mimetype': 'text/html'}
-
-    else:
-        body = '<h1>Invalid action: %r</h1>' % action
-        return [body], {'mimetype': 'text/html'}
+    body = '<h1>Invalid action: %r</h1>' % action
+    return [body], {'mimetype': 'text/html'}
 
 
 @app.route('/gen_strokes', methods=['POST'])
