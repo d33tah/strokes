@@ -337,7 +337,9 @@ def gen_pdfs(pages):
     pdf_files = []
     try:
         for page in pages:
-            pdf_files.append(page.f)
+            pdf = gen_pdf(page.f.getvalue())
+            pdf_f = io.BytesIO(pdf)
+            pdf_files.append(pdf_f)
             merger.append(pdf_f)
 
         with io.BytesIO() as fout:
