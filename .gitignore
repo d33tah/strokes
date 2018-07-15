@@ -1,0 +1,8 @@
+dictionary.txt
+graphics.txt
+__pycache__
+htmlcov
+.coverage
+*.swp
+*.swo
+.mypy_cache
