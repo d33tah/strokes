@@ -13,6 +13,9 @@ Requires downloading the following files:
 
 TODO:
 
+    * figure out zooming in previews, get rid of two modes
+    * make all html views validate
+    * progress reporting?
     * better error reporting
     * add print margins?
     * more options: how many repetitions of each stroke, how many characters
