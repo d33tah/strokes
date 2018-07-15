@@ -36,6 +36,7 @@ import json
 import logging
 import random
 import requests
+import unittest
 
 
 from PyPDF2 import PdfFileMerger
@@ -137,7 +138,7 @@ class Tile:
             font-size="300px">%s</text>''' % add_text)
         header_args = {'x': self.x, 'y': self.y, 'size': self.size}
         preamble_args = {'leftline_width': self.leftline_width,
-            'topline_width': self.topline_width}
+                         'topline_width': self.topline_width}
 
         with io.StringIO() as f:
 
@@ -258,10 +259,10 @@ class Page:
 
             # draw lines surronding groups
             if row_num > 0 and (self.tiles_by_pos[row_num - 1][col_num].chunk
-                    != tile.chunk):
+                                != tile.chunk):
                 tile.leftline_width = LINE_THICK
             if col_num > 0 and (self.tiles_by_pos[row_num][col_num - 1].chunk
-                    != tile.chunk):
+                                != tile.chunk):
                 tile.topline_width = LINE_THICK
 
             y = (col_num + 1) * self.tile_size
@@ -389,3 +390,8 @@ def index():
             name="action">Preview (SVG, zoomed in)</button>
     </form>
     '''
+
+
+class SystemTests(unittest.TestCase):
+    def test_nihao_preview(self):
+        draw('你好', 12, 0, 'preview_small')

@@ -1,0 +1,3 @@
+coverage
+nose
+flake8

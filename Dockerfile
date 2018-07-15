@@ -1,4 +1,4 @@
-FROM alpine:latest
+FROM alpine:latest as base
 
 RUN apk update && apk add python3
 
@@ -11,6 +11,13 @@ ADD ./strokes.py /tmp/
 ADD ./wiktionary-data.json /tmp/
 ADD ./alt_forms.json /tmp/
 ADD ./all_definitions.json /tmp/
+
+FROM base as test
+ADD ./requirements-dev.txt /tmp
+RUN coverage run --branch -m nose strokes.py
+RUN coverage report
+
+FROM base
 RUN chmod +x /tmp/strokes.py
 
 WORKDIR /tmp
