@@ -82,10 +82,12 @@ class Tile:
 
     PREAMBLE = '''
         <g stroke="black" stroke-width="2" transform="scale(4, 4)">
-            <line x1="0" y1="0" x2="0" y2="256" stroke-width="10"></line>
+            <line x1="0" y1="0" x2="0" y2="256"
+                stroke-width="%(leftline_width)d"></line>
             <line x1="0" y1="0" x2="256" y2="256"></line>
             <line x1="256" y1="0" x2="0" y2="256"></line>
-            <line x1="256" y1="0" x2="0" y2="0" stroke-width="10"></line>
+            <line x1="256" y1="0" x2="0" y2="0"
+                stroke-width="%(topline_width)d"></line>
             <line x1="256" y1="0" x2="256" y2="256"></line>
             <line x1="128" y1="0" x2="128" y2="256"></line>
             <line x1="0" y1="128" x2="256" y2="128"></line>
@@ -113,6 +115,8 @@ class Tile:
         self.x = None
         self.y = None
         self.size = None
+        self.leftline_width = 10
+        self.topline_width = 10
 
     def set_dimensions(self, x, y, size):
         self.x = x
@@ -127,12 +131,14 @@ class Tile:
         add_text = P[self.C] if self.add_pinyin else ''
         add_text_svg = ('''<text x="50" y="950"
             font-size="300px">%s</text>''' % add_text)
+        header_args = {'x': self.x, 'y': self.y, 'size': self.size}
+        preamble_args = {'leftline_width': self.leftline_width,
+            'topline_width': self.topline_width}
 
         with io.StringIO() as f:
 
-            header_args = {'x': self.x, 'y': self.y, 'size': self.size}
             f.write(''.join([self.SVG_HEADER % header_args, add_text_svg,
-                             self.PREAMBLE]))
+                             self.PREAMBLE % preamble_args]))
             for n, stroke in enumerate(self.strokes):
                 if n < self.skip_strokes or n >= self.stop_at:
                     continue
@@ -222,7 +228,7 @@ class Page:
 
     def __init__(self, page_drawn, tile_size, gen_images_iter):
         self.page_drawn = page_drawn
-        self.tiles = collections.defaultdict(dict)
+        self.tiles_by_pos = collections.defaultdict(dict)
         self.num_per_row = PAGE_SIZE[0] // tile_size
         self.num_rows = PAGE_SIZE[1] // tile_size
         self.hdr = Header()
@@ -239,14 +245,23 @@ class Page:
                     self.hdr.observe_char(tile.C)
             except StopIteration:
                 return False
-            row_num = (i % self.num_per_row)
+            row_num = i % self.num_per_row
             x = row_num * self.tile_size
-            col_num = ((i // self.num_per_row) + 1)
-            y = col_num * self.tile_size
+            col_num = i // self.num_per_row
+
+            # draw lines surronding groups
+            left_tile_chunk = self.tiles_by_pos[row_num - 1][col_num].chunk
+            if row_num > 0 and left_tile_chunk != tile.chunk:
+                tile.leftline_width = 30
+            upper_tile_chunk = self.tiles_by_pos[row_num][col_num - 1].chunk
+            if col_num > 0 and upper_tile_chunk != tile.chunk:
+                tile.topline_width = 30
+
+            y = (col_num + 1) * self.tile_size
             if ((i // self.num_per_row) + 3) > self.num_rows:
                 break
             tile.set_dimensions(x, y, self.tile_size)
-            self.tiles[row_num][col_num] = tile
+            self.tiles_by_pos[row_num][col_num] = tile
             f.write(tile.render())
         return True
 
