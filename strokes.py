@@ -8,6 +8,7 @@ import json
 import logging
 import random
 import unittest
+import unittest.mock
 
 import requests
 
@@ -402,7 +403,7 @@ def gen_strokes():
     size = int(request.form.get('size') or 10)
     num_repetitions = int(request.form.get('nr') or 3)
 
-    if not 'chars' in request.form:
+    if 'chars' not in request.form:
         resp_kwargs = {'status': 400, 'mimetype': 'text/html'}
         return Response('<h1>Missing "chars" argument.</h1>', **resp_kwargs)
     C = request.form['chars']
@@ -435,6 +436,23 @@ def index():
     '''
 
 
+MINIMAL_PDF_MOCK = lambda *_, **__: base64.b64decode(
+b'''JVBERi0xLjEKJcKlwrHDqwoKMSAwIG9iagogIDw8IC9UeXBlIC9DYXRhbG9nCiAgICAgL1BhZ2V
+zIDIgMCBSCiAgPj4KZW5kb2JqCgoyIDAgb2JqCiAgPDwgL1R5cGUgL1BhZ2VzCiAgICAgL0tpZHMg
+WzMgMCBSXQogICAgIC9Db3VudCAxCiAgICAgL01lZGlhQm94IFswIDAgMzAwIDE0NF0KICA+Pgpl
+bmRvYmoKCjMgMCBvYmoKICA8PCAgL1R5cGUgL1BhZ2UKICAgICAgL1BhcmVudCAyIDAgUgogICAg
+ICAvUmVzb3VyY2VzCiAgICAgICA8PCAvRm9udAogICAgICAgICAgIDw8IC9GMQogICAgICAgICAg
+ICAgICA8PCAvVHlwZSAvRm9udAogICAgICAgICAgICAgICAgICAvU3VidHlwZSAvVHlwZTEKICAg
+ICAgICAgICAgICAgICAgL0Jhc2VGb250IC9UaW1lcy1Sb21hbgogICAgICAgICAgICAgICA+Pgog
+ICAgICAgICAgID4+CiAgICAgICA+PgogICAgICAvQ29udGVudHMgNCAwIFIKICA+PgplbmRvYmoK
+CjQgMCBvYmoKICA8PCAvTGVuZ3RoIDU1ID4+CnN0cmVhbQogIEJUCiAgICAvRjEgMTggVGYKICAg
+IDAgMCBUZAogICAgKEhlbGxvIFdvcmxkKSBUagogIEVUCmVuZHN0cmVhbQplbmRvYmoKCnhyZWYK
+MCA1CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAxOCAwMDAwMCBuIAowMDAwMDAwMDc3IDAw
+MDAwIG4gCjAwMDAwMDAxNzggMDAwMDAgbiAKMDAwMDAwMDQ1NyAwMDAwMCBuIAp0cmFpbGVyCiAg
+PDwgIC9Sb290IDEgMCBSCiAgICAgIC9TaXplIDUKICA+PgpzdGFydHhyZWYKNTY1CiUlRU9GCg==
+    ''')
+
+
 # I was too lazy to write regular unit tests and this is already pretty fast
 # and gives decent coverage, so some red flags will be caught:
 class SystemTests(unittest.TestCase):
@@ -444,23 +462,48 @@ class SystemTests(unittest.TestCase):
         self.app = app.test_client()
 
     def test_get_index(self):
-        self.app.get('/')
+        rv = self.app.get('/')
+        self.assertEqual(rv.status, '200 OK')
 
     def test_fivedigits_smallpreview(self):
-        draw('一二三四五', 12, 1, 'preview_small')
+        data = {'size': 12, 'nr': 1, 'action': 'preview_small',
+                'chars': '一二三四五'}
+        rv = self.app.post('/gen_strokes', data=data)
+        self.assertEqual(rv.status, '200 OK')
 
     def test_fivedigits_smallpreview_norepeats(self):
-        draw('一二三四五', 12, 0, 'preview_small')
+        data = {'size': 12, 'nr': 0, 'action': 'preview_small',
+                'chars': '一二三四五'}
+        rv = self.app.post('/gen_strokes', data=data)
+        self.assertEqual(rv.status, '200 OK')
 
     def test_fivedigits_bigpreview(self):
-        draw('一二三四五', 12, 1, 'preview_large')
+        data = {'size': 12, 'nr': 1, 'action': 'preview_large',
+                'chars': '一二三四五'}
+        rv = self.app.post('/gen_strokes', data=data)
+        self.assertEqual(rv.status, '200 OK')
 
     def test_xiexie_multipage(self):
-        draw('谢', 30, 10, 'preview_small')
+        data = {'size': 30, 'nr': 10, 'action': 'preview_small',
+                'chars': '谢'}
+        rv = self.app.post('/gen_strokes', data=data)
+        self.assertEqual(rv.status, '200 OK')
 
     def test_invalid_action_signals_error(self):
-        args, kwargs = draw('谢', 12, 0, 'invalid')
-        self.assertNotEqual(kwargs['status'], 200)
+        data = {'size': 12, 'nr': 1, 'action': 'invalid',
+                'chars': '一二三四五'}
+        rv = self.app.post('/gen_strokes', data=data)
+        self.assertNotEqual(rv.status, '200 OK')
 
     def test_multiline_header(self):
-        draw('一七三上下不东个中么九习书买了二五些京亮人什', 12, 0, 'invalid')
+        data = {'size': 12, 'nr': 1, 'action': 'preview_small',
+                'chars': '一七三上下不东个中么九习书买了二五些京亮人什'}
+        rv = self.app.post('/gen_strokes', data=data)
+        self.assertEqual(rv.status, '200 OK')
+
+    @unittest.mock.patch.dict(globals(), {'gen_pdf': MINIMAL_PDF_MOCK})
+    def test_gen_pdf(self):
+        data = {'size': 12, 'nr': 1, 'action': 'generate',
+                'chars': '一二三四五'}
+        rv = self.app.post('/gen_strokes', data=data)
+        self.assertEqual(rv.status, '200 OK')
