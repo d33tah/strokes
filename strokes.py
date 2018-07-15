@@ -250,11 +250,11 @@ class Page:
             col_num = i // self.num_per_row
 
             # draw lines surronding groups
-            left_tile_chunk = self.tiles_by_pos[row_num - 1][col_num].chunk
-            if row_num > 0 and left_tile_chunk != tile.chunk:
+            if row_num > 0 and (self.tiles_by_pos[row_num - 1][col_num].chunk
+                    != tile.chunk):
                 tile.leftline_width = 30
-            upper_tile_chunk = self.tiles_by_pos[row_num][col_num - 1].chunk
-            if col_num > 0 and upper_tile_chunk != tile.chunk:
+            if col_num > 0 and (self.tiles_by_pos[row_num][col_num - 1].chunk
+                    != tile.chunk):
                 tile.topline_width = 30
 
             y = (col_num + 1) * self.tile_size
@@ -278,7 +278,7 @@ class Page:
         return True
 
 
-def gen_svg(size, gen_images_iter):
+def gen_svgs(size, gen_images_iter):
 
     pages = []
     page_drawn = 0
@@ -298,12 +298,13 @@ def gen_pdf(svg_code):
     return resp.content
 
 
-def join_pages(pdfs, outpath=None):
+def gen_pdfs(pages):
 
     merger = PdfFileMerger()
     pdf_files = []
     try:
-        for pdf in pdfs:
+        for n, page in enumerate(pages):
+            pdf = gen_pdf(page.f.getvalue())
             pdf_f = io.BytesIO(pdf)
             pdf_files.append(pdf_f)
             merger.append(pdf_f)
@@ -316,20 +317,27 @@ def join_pages(pdfs, outpath=None):
             pdf_f.close()
 
 
-def draw(input_characters, size, num_repeats):
+def gen_html(pages):
+    ret = '<body>'
+    for page in pages:
+        ret += page.f.getvalue()
+    return ret
+
+
+def draw(input_characters, size, num_repeats, action):
 
     LOGGER.info('Generating SVG...')
 
     gen_images_iter = iter(gen_images(input_characters, num_repeats))
 
-    pages = gen_svg(size, gen_images_iter)
+    pages = gen_svgs(size, gen_images_iter)
 
     LOGGER.error('Generating pdfs...')
-    pdfs = []
-    for n, page in enumerate(pages):
-        pdfs.append(gen_pdf(page.f.getvalue()))
 
-    return join_pages(pdfs)
+    if action == 'Generate':
+        return gen_pdfs(pages), 'application/pdf'
+    else:
+        return gen_html(pages), 'text/html'
 
 
 @app.route('/gen_strokes', methods=['POST'])
@@ -337,7 +345,9 @@ def gen_strokes():
     size = int(request.form.get('size') or 10)
     num_repetitions = int(request.form.get('nr') or 3)
     C = request.form.get('chars') or 'X'
-    return Response(draw(C, size, num_repetitions), mimetype='application/pdf')
+    action = request.form.get('action') or 'Preview'
+    response, mimetype = draw(C, size, num_repetitions, action)
+    return Response(response, mimetype=mimetype)
 
 
 @app.route('/')
@@ -347,7 +357,8 @@ def index():
         <p>Characters: <input type="text" name="chars" value="你好"/></p>
         <p>Size: <input type="text" name="size" value="15"/></p>
         <p>Number of repetitions (0 means "no repetitions", try it out):
-            <input type="text" name="nr" value="3"/></p>
-        <input type="submit" value="Generate strokes">
+            <input type="text" name="nr" value="1"/></p>
+        <input type="submit" value="Generate" name="action">
+        <input type="submit" value="Preview" name="action">
     </form>
     '''
