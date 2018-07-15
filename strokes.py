@@ -10,20 +10,34 @@ Requires downloading the following files:
 
     https://raw.githubusercontent.com/skishore/makemeahanzi/master/graphics.txt
     https://raw.githubusercontent.com/skishore/makemeahanzi/master/dictionary.txt
+'''
 
-TODO:
+'''
+*** TODO ***
 
-    * figure out zooming in previews, get rid of two modes
-    * make all html views validate
-    * progress reporting?
-    * better error reporting
+Bugs:
+
+    * figure out zooming in previews, get rid of two preview modes
+
+UX:
+
     * add print margins?
+    * progress reporting?
     * more options: how many repetitions of each stroke, how many characters
       does it take to switch to random mode?
-    * repetition mode: show two strokes at once?
-    * make frontend cuter
     * custom titles
-    * move all initialization outside of the hot loop
+    * make frontend cuter
+
+Learning:
+
+    * repetition mode: show two strokes at once?
+
+Testing:
+
+    * make all html views validate
+    * better error reporting
+    * selenium tests
+    * unit tests
 
 ------------------------------------------------------------------------------
 '''
@@ -37,7 +51,6 @@ import logging
 import random
 import requests
 import unittest
-
 
 from PyPDF2 import PdfFileMerger
 from flask import Flask, Response, request
@@ -164,8 +177,10 @@ def grouper(iterable, n):
 def gen_images(input_characters, num_repeats):
     # if we're not really repeating characters, chunks are meaningless
     if num_repeats == 0:
-        CHUNK_SIZE = 1
-    for chunk_iter in grouper(iter(input_characters), CHUNK_SIZE):
+        chunk_size = 1
+    else:
+        chunk_size = CHUNK_SIZE
+    for chunk_iter in grouper(iter(input_characters), chunk_size):
         chunk = list(chunk_iter)
         for C in chunk:
             strokes = STROKES_DB[C]
@@ -392,6 +407,23 @@ def index():
     '''
 
 
+# I was too lazy to write regular unit tests and this is already pretty fast
+# and gives decent coverage, so some red flags will be caught:
 class SystemTests(unittest.TestCase):
-    def test_nihao_preview(self):
-        draw('你好', 12, 0, 'preview_small')
+    def test_fivedigits_smallpreview(self):
+        draw('一二三四五', 12, 1, 'preview_small')
+
+    def test_fivedigits_smallpreview_norepeats(self):
+        draw('一二三四五', 12, 0, 'preview_small')
+
+    def test_fivedigits_bigpreview(self):
+        draw('一二三四五', 12, 1, 'preview_large')
+
+    def test_xiexie_multipage(self):
+        draw('谢', 30, 10, 'preview_small')
+
+    def test_invalid_action(self):
+        draw('谢', 12, 0, 'invalid')
+
+    def test_multiline_header(self):
+        draw('一七三上下不东个中么九习书买了二五些京亮人什', 12, 0, 'invalid')

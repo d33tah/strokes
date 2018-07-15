@@ -7,6 +7,11 @@ RUN wget -nv https://github.com/skishore/makemeahanzi/blob/master/dictionary.txt
 
 ADD ./requirements.txt /tmp
 RUN pip3 install -r /tmp/requirements.txt && rm /tmp/requirements.txt
+
+# I could put it in a separate stage, but I couldn't get it to work w/caching.
+ADD ./requirements-dev.txt /tmp
+RUN pip3 install -r /tmp/requirements-dev.txt && rm /tmp/requirements-dev.txt
+
 ADD ./strokes.py /tmp/
 ADD ./wiktionary-data.json /tmp/
 ADD ./alt_forms.json /tmp/
@@ -17,18 +22,7 @@ WORKDIR /tmp
 RUN mkdir /tmp/imagecache
 CMD FLASK_APP=/tmp/strokes.py flask run -h 0.0.0.0
 
-############################################################################
-#                                                                          #
-#                               <test>                                     #
-#                                                                          #
-############################################################################
-FROM base as test
-ADD ./requirements-dev.txt /tmp
 RUN coverage run --branch -m nose strokes.py
 RUN coverage report
-FROM base
-############################################################################
-#                                                                          #
-#                               </test>                                    #
-#                                                                          #
-############################################################################
+
+EXPOSE 5000
