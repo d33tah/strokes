@@ -47,7 +47,7 @@ Learning:
     * repetition mode: show two strokes at once?
     * group using this pattern: A, B, AB, C, D, CD, ABCD, ...
 
-Testing:
+Testing and refactoring:
 
     * make all html views validate
     * better error reporting
@@ -62,7 +62,6 @@ app = Flask(__name__)
 
 PAGE_SIZE = (200, 300)
 LOGGER = logging.getLogger(__name__)
-CURRENT_FILE = __file__ if '__file__' in globals() else ''
 CHUNK_SIZE = 4
 LINE_THICK = 30
 
@@ -87,14 +86,17 @@ def load_dictionary(dictionary_txt_path):
 
 
 STROKES_DB = load_strokes_db('graphics.txt')
-P = load_dictionary('dictionary.txt')
+PINYIN_DB = load_dictionary('dictionary.txt')
 
 
 class Tile:
     """Class responsible for preparing SVG code describing a single tine.
 
-    The reason it exists right now is because otherwise I would have to
-    additionally hold 'C' variable and I plan to keep more data here."""
+    It's used for storage of data related to rendering - i.e. group it belongs
+    to. I could probably get away with dict + function but it'd be uglier.
+
+    Also, set_dimensions had to be deferred because gen_images_iter can't know
+    it."""
 
     SVG_HEADER = '''<svg x="%(x)d" y="%(y)d" width="%(size)d"
         height="%(size)d"><svg version="1.1" viewBox="0 0 1024 1024"
@@ -148,7 +150,7 @@ class Tile:
         if not all([self.size, self.y, self.size]):
             raise RuntimeError("Call set_dimensions first!")
 
-        add_text = P[self.C] if self.add_pinyin else ''
+        add_text = PINYIN_DB[self.C] if self.add_pinyin else ''
         add_text_svg = ('''<text x="50" y="950"
             font-size="300px">%s</text>''' % add_text)
         header_args = {'x': self.x, 'y': self.y, 'size': self.size}
@@ -177,17 +179,24 @@ def grouper(iterable, n):
 
 
 def gen_images(input_characters, num_repeats):
+    """This is where the learning logic sits.
+
+    We iterate over input_characters grouped in groups and by each stroke of
+    each character, generating num_repeats of titles of various types. At
+    the end, we optionally randomly ask the user to write those based on
+    pinyin."""
+
     # if we're not really repeating characters, chunks are meaningless
     if num_repeats == 0:
         chunk_size = 1
     else:
         chunk_size = CHUNK_SIZE
+
     for chunk_iter in grouper(iter(input_characters), chunk_size):
         chunk = list(chunk_iter)
         for C in chunk:
             strokes = STROKES_DB[C]
-            num_strokes = len(strokes)
-            for n in range(num_strokes):
+            for n in range(len(strokes)):
 
                 if num_repeats == 0:
                     yield Tile(C, chunk, strokes, n, 0, 99, False)
@@ -233,12 +242,11 @@ class Header:
         # tspan.
         if len(self.header) > 75 and '<tspan' not in self.header[1:]:
             self.header += '</tspan><tspan x="0" dy="1.2em">'
-        self.header += '%s (%s)' % (C, P[C])
+        self.header += '%s (%s)' % (C, PINYIN_DB[C])
 
     def get_text(self, page_drawn):
-        ret = '<tspan x="0" dy="0em">%d: %s</tspan>' % (page_drawn,
-                                                        self.header)
-        return '<text x="0" y="5" font-size="5px">%s</text>' % ret
+        return '''<text x="0" y="5" font-size="5px"><tspan x="0" dy="0em"
+            >%d: %s</tspan></text>''' % (page_drawn, self.header)
 
 
 class Page:
@@ -289,6 +297,8 @@ class Page:
         return True
 
     def prepare(self):
+        """Renders the page and returns a boolean that tells whether it was
+        the last one."""
 
         self.f.write(self.HEADER_SINGLE)
         try:
@@ -340,17 +350,17 @@ def gen_pdfs(pages):
 
 def gen_html(pages, small=True):
     # just put together the stream of SVG images
-    body = '<body>'
+    body = ['<body>']
     for page in pages:
         svg_code = page.f.getvalue()
         if small:
-            body += svg_code
+            body.append(svg_code)
             continue
         # The following zooms the images in, but doesn't allow zooming out
         data_b64 = base64.b64encode(svg_code.encode('utf8')).decode('ascii')
-        datauri = 'data:image/svg+xml;base64,' + data_b64
-        body += '<img src="%s" />' % datauri
-    return body
+        datauri = 'data:image/svg+xml;base64,%s' % data_b64
+        body.append('<img src="%s" />' % datauri)
+    return ''.join(body)
 
 
 def draw(input_characters, size, num_repeats, action):
