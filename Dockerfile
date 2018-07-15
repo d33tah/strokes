@@ -22,7 +22,7 @@ WORKDIR /tmp
 RUN mkdir /tmp/imagecache
 CMD FLASK_APP=/tmp/strokes.py flask run -h 0.0.0.0
 
-RUN coverage run --branch -m nose strokes.py
+RUN coverage run --source=. --branch -m nose strokes.py
 RUN coverage report
 
 EXPOSE 5000

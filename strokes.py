@@ -67,7 +67,7 @@ LINE_THICK = 30
 
 
 def load_strokes_db(graphics_txt_path):
-    ret = {'X': []}
+    ret = {}
     with open(graphics_txt_path, 'r', encoding='utf8') as f:
         for line in f:
             x = json.loads(line)
@@ -76,7 +76,7 @@ def load_strokes_db(graphics_txt_path):
 
 
 def load_dictionary(dictionary_txt_path):
-    d = {'X': ''}
+    d = {}
     with open(dictionary_txt_path, 'r') as f:
         for line in f:
             j = json.loads(line)
@@ -260,40 +260,54 @@ class Page:
     def __init__(self, page_drawn, tile_size, gen_images_iter):
         self.page_drawn = page_drawn
         self.tiles_by_pos = collections.defaultdict(dict)
-        self.num_per_row = PAGE_SIZE[0] // tile_size
-        self.num_rows = PAGE_SIZE[1] // tile_size
         self.hdr = Header()
         self.tile_size = tile_size
         self.gen_images_iter = gen_images_iter
         self.f = io.StringIO()
         self.rendered = ''
 
-    def write_tiles(self, f):
-        for i in range(self.num_per_row * (self.num_rows - 1)):
-            try:
-                tile = next(self.gen_images_iter)
-                if not tile.skip_in_header:
-                    self.hdr.observe_char(tile.C)
-            except StopIteration:
-                return False
-            row_num = i % self.num_per_row
-            x = row_num * self.tile_size
-            col_num = i // self.num_per_row
+    def gen_positions(self):
 
-            # draw lines surronding groups
-            if row_num > 0 and (self.tiles_by_pos[row_num - 1][col_num].chunk
-                                != tile.chunk):
-                tile.leftline_width = LINE_THICK
-            if col_num > 0 and (self.tiles_by_pos[row_num][col_num - 1].chunk
-                                != tile.chunk):
-                tile.topline_width = LINE_THICK
+        num_per_row = PAGE_SIZE[0] // self.tile_size
+        num_rows = PAGE_SIZE[1] // self.tile_size
 
-            y = (col_num + 1) * self.tile_size
-            if ((i // self.num_per_row) + 3) > self.num_rows:
+        for i in range(num_per_row * (num_rows - 1)):
+
+            row_num = i % num_per_row
+            col_num = i // num_per_row
+
+            if ((i // num_per_row) + 3) > num_rows:
+                # this page is full, move on to generating another
                 break
-            tile.set_dimensions(x, y, self.tile_size)
+
+            yield row_num, col_num
+
+    def maybe_draw_border(self, tile, row_num, col_num):
+        if row_num > 0 and (self.tiles_by_pos[row_num - 1][col_num].chunk
+                            != tile.chunk):
+            tile.leftline_width = LINE_THICK
+        if col_num > 0 and (self.tiles_by_pos[row_num][col_num - 1].chunk
+                            != tile.chunk):
+            tile.topline_width = LINE_THICK
+
+    def write_tiles(self, f):
+
+        for row_num, col_num in self.gen_positions():
+
+            x = row_num * self.tile_size
+            y = (col_num + 1) * self.tile_size
+
+            tile = next(self.gen_images_iter)
             self.tiles_by_pos[row_num][col_num] = tile
+            tile.set_dimensions(x, y, self.tile_size)
+
+            if not tile.skip_in_header:
+                self.hdr.observe_char(tile.C)
+
+            self.maybe_draw_border(tile, row_num, col_num)
+
             f.write(tile.render())
+
         return True
 
     def prepare(self):
@@ -302,13 +316,12 @@ class Page:
 
         self.f.write(self.HEADER_SINGLE)
         try:
-            if not self.write_tiles(self.f):
-                return False
+            self.write_tiles(self.f)
         finally:
+            # in the last page, we will get StopIteration. Regardless of it,
+            # We need to finalize rendering.
             self.f.write(self.hdr.get_text(self.page_drawn))
             self.f.write(self.FOOTER_SINGLE)
-            self.f.seek(0)
-        return True
 
 
 def gen_svgs(size, gen_images_iter):
@@ -319,7 +332,9 @@ def gen_svgs(size, gen_images_iter):
         page_drawn += 1
         page = Page(page_drawn, size, gen_images_iter)
         pages.append(page)
-        if not page.prepare():
+        try:
+            page.prepare()
+        except StopIteration:
             break
     return pages
 
@@ -379,14 +394,19 @@ def draw(input_characters, size, num_repeats, action):
     if action == 'preview_large':
         return [gen_html(pages, False)], {'mimetype': 'text/html'}
     body = '<h1>Invalid action: %r</h1>' % action
-    return [body], {'mimetype': 'text/html'}
+    return [body], {'mimetype': 'text/html', 'status': 400}
 
 
 @app.route('/gen_strokes', methods=['POST'])
 def gen_strokes():
     size = int(request.form.get('size') or 10)
     num_repetitions = int(request.form.get('nr') or 3)
-    C = request.form.get('chars') or 'X'
+
+    if not 'chars' in request.form:
+        resp_kwargs = {'status': 400, 'mimetype': 'text/html'}
+        return Response('<h1>Missing "chars" argument.</h1>', **resp_kwargs)
+    C = request.form['chars']
+
     action = request.form.get('action') or 'preview'
     try:
         resp_args, resp_kwargs = draw(C, size, num_repetitions, action)
@@ -418,6 +438,14 @@ def index():
 # I was too lazy to write regular unit tests and this is already pretty fast
 # and gives decent coverage, so some red flags will be caught:
 class SystemTests(unittest.TestCase):
+
+    def setUp(self):
+        app.testing = True
+        self.app = app.test_client()
+
+    def test_get_index(self):
+        self.app.get('/')
+
     def test_fivedigits_smallpreview(self):
         draw('一二三四五', 12, 1, 'preview_small')
 
@@ -430,8 +458,9 @@ class SystemTests(unittest.TestCase):
     def test_xiexie_multipage(self):
         draw('谢', 30, 10, 'preview_small')
 
-    def test_invalid_action(self):
-        draw('谢', 12, 0, 'invalid')
+    def test_invalid_action_signals_error(self):
+        args, kwargs = draw('谢', 12, 0, 'invalid')
+        self.assertNotEqual(kwargs['status'], 200)
 
     def test_multiline_header(self):
         draw('一七三上下不东个中么九习书买了二五些京亮人什', 12, 0, 'invalid')
