@@ -45,6 +45,7 @@ UX:
 Learning:
 
     * repetition mode: show two strokes at once?
+    * group using this pattern: A, B, AB, C, D, CD, ABCD, ...
 
 Testing:
 
