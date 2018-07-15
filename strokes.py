@@ -324,27 +324,38 @@ def gen_pdfs(pages):
             pdf_f.close()
 
 
-def gen_html(pages):
-    ret = '<body>'
+def gen_html(pages, small=True):
+    # just put together the stream of SVG images
+    body = '<body>'
     for page in pages:
-        ret += page.f.getvalue()
-    return ret
+        svg_code = page.f.getvalue()
+        if small:
+            body += svg_code
+            continue
+        # The following zooms the images in, but doesn't allow zooming out
+        data_b64 = base64.b64encode(svg_code.encode('utf8')).decode('ascii')
+        datauri = 'data:image/svg+xml;base64,' + data_b64
+        body += '<img src="%s" />' % datauri
+    return body
 
 
 def draw(input_characters, size, num_repeats, action):
 
     LOGGER.info('Generating SVG...')
-
     gen_images_iter = iter(gen_images(input_characters, num_repeats))
-
     pages = gen_svgs(size, gen_images_iter)
-
     LOGGER.error('Generating pdfs...')
 
-    if action == 'Generate':
-        return gen_pdfs(pages), 'application/pdf'
+    if action == 'generate':
+        return [gen_pdfs(pages)], {'mimetype': 'application/pdf'}
+    elif action == 'preview_small':
+        return [gen_html(pages)], {'mimetype': 'text/html'}
+    elif action == 'preview_large':
+        return [gen_html(pages, False)], {'mimetype': 'text/html'}
+
     else:
-        return gen_html(pages), 'text/html'
+        body = '<h1>Invalid action: %r</h1>' % action
+        return [body], {'mimetype': 'text/html'}
 
 
 @app.route('/gen_strokes', methods=['POST'])
@@ -352,9 +363,13 @@ def gen_strokes():
     size = int(request.form.get('size') or 10)
     num_repetitions = int(request.form.get('nr') or 3)
     C = request.form.get('chars') or 'X'
-    action = request.form.get('action') or 'Preview'
-    response, mimetype = draw(C, size, num_repetitions, action)
-    return Response(response, mimetype=mimetype)
+    action = request.form.get('action') or 'preview'
+    try:
+        resp_args, resp_kwargs = draw(C, size, num_repetitions, action)
+    except KeyError as e:
+        resp_args = ['<h1>Unknown character: %r</h1>' % e.args[0]]
+        resp_kwargs = {'status': 400, 'mimetype': 'text/html'}
+    return Response(*resp_args, **resp_kwargs)
 
 
 @app.route('/')
@@ -363,9 +378,14 @@ def index():
         <form action="/gen_strokes" method="post">
         <p>Characters: <input type="text" name="chars" value="你好"/></p>
         <p>Size: <input type="text" name="size" value="15"/></p>
-        <p>Number of repetitions (0 means "no repetitions", try it out):
+        <p>Number of repetitions. 0 means "no repetitions"; useful if you're
+            just trying to quickly get familiar with many characters:
             <input type="text" name="nr" value="1"/></p>
-        <input type="submit" value="Generate" name="action">
-        <input type="submit" value="Preview" name="action">
+        <button type="submit" value="generate"
+            name="action">Generate (PDF, slow)</button>
+        <button type="submit" value="preview_small"
+            name="action">Preview (SVG, zoomed out)</button>
+        <button type="submit" value="preview_large"
+            name="action">Preview (SVG, zoomed in)</button>
     </form>
     '''
