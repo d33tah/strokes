@@ -158,6 +158,9 @@ def grouper(iterable, n):
 
 
 def gen_images(input_characters, num_repeats):
+    # if we're not really repeating characters, chunks are meaningless
+    if num_repeats == 0:
+        CHUNK_SIZE = 1
     for chunk_iter in grouper(iter(input_characters), CHUNK_SIZE):
         chunk = list(chunk_iter)
         for C in chunk:
