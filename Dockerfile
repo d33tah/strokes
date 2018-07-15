@@ -12,14 +12,23 @@ ADD ./wiktionary-data.json /tmp/
 ADD ./alt_forms.json /tmp/
 ADD ./all_definitions.json /tmp/
 
+RUN chmod +x /tmp/strokes.py
+WORKDIR /tmp
+RUN mkdir /tmp/imagecache
+CMD FLASK_APP=/tmp/strokes.py flask run -h 0.0.0.0
+
+############################################################################
+#                                                                          #
+#                               <test>                                     #
+#                                                                          #
+############################################################################
 FROM base as test
 ADD ./requirements-dev.txt /tmp
 RUN coverage run --branch -m nose strokes.py
 RUN coverage report
-
 FROM base
-RUN chmod +x /tmp/strokes.py
-
-WORKDIR /tmp
-RUN mkdir /tmp/imagecache
-CMD FLASK_APP=/tmp/strokes.py flask run -h 0.0.0.0
+############################################################################
+#                                                                          #
+#                               </test>                                    #
+#                                                                          #
+############################################################################
