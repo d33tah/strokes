@@ -236,8 +236,6 @@ class Header:
     def get_text(self, page_drawn):
         ret = '<tspan x="0" dy="0em">%d: %s</tspan>' % (page_drawn,
                                                         self.header)
-        if '<tspan>' in self.header[1:]:
-            self.header += '</tspan>'
         return '<text x="0" y="5" font-size="5px">%s</text>' % ret
 
 
