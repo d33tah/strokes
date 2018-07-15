@@ -45,6 +45,7 @@ PAGE_SIZE = (200, 300)
 LOGGER = logging.getLogger(__name__)
 CURRENT_FILE = __file__ if '__file__' in globals() else ''
 CHUNK_SIZE = 4
+LINE_THICK = 30
 
 
 def load_strokes_db(graphics_txt_path):
@@ -252,10 +253,10 @@ class Page:
             # draw lines surronding groups
             if row_num > 0 and (self.tiles_by_pos[row_num - 1][col_num].chunk
                     != tile.chunk):
-                tile.leftline_width = 30
+                tile.leftline_width = LINE_THICK
             if col_num > 0 and (self.tiles_by_pos[row_num][col_num - 1].chunk
                     != tile.chunk):
-                tile.topline_width = 30
+                tile.topline_width = LINE_THICK
 
             y = (col_num + 1) * self.tile_size
             if ((i // self.num_per_row) + 3) > self.num_rows:
