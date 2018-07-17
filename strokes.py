@@ -421,7 +421,8 @@ def gen_strokes():
 def index():
     return '''<!DOCTYPE HTML><html><body>
         <form action="/gen_strokes" method="post">
-        <p>Characters: <input type="text" name="chars" value="你好"/></p>
+        <p>Characters: <input type="text" name="chars"
+            value="一二三四五六七八"/></p>
         <p>Size: <input type="text" name="size" value="15"/></p>
         <p>Number of repetitions. 0 means "no repetitions"; useful if you're
             just trying to quickly get familiar with many characters:
