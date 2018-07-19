@@ -407,6 +407,7 @@ def gen_strokes():
         resp_kwargs = {'status': 400, 'mimetype': 'text/html'}
         return Response('<h1>Missing "chars" argument.</h1>', **resp_kwargs)
     C = request.form['chars']
+    C = ''.join(C.split())  # strip all whitespace
 
     action = request.form.get('action') or 'preview'
     try:
