@@ -7,6 +7,7 @@ import itertools
 import json
 import logging
 import random
+import unicodedata
 import unittest
 import unittest.mock
 
@@ -385,6 +386,36 @@ def gen_html(pages, small=True):
     return ''.join(body)
 
 
+def pinyin_sortable(chinese_character):
+    # FIXME: this is ugly because I was bugfixing it without refactoring
+    pinyin = PINYIN_DB[chinese_character]
+    accent_to_number = {
+        ' WITH MACRON': '1',
+        ' WITH ACUTE': '2',
+        ' WITH CARON': '3',
+        ' WITH GRAVE': '4',
+    }
+    ret = []
+    tones = []
+    for c in pinyin:
+        n = unicodedata.name(c)
+        for k, v in accent_to_number.items():
+            if k in n:
+                n = n.replace(k, '')
+                tones.append(v)
+        ret.append(unicodedata.lookup(n))
+    return ''.join(ret) + ''.join(tones)
+
+
+def sort_input(input_characters, sorting):
+    if sorting == 'none':
+        return input_characters
+    elif sorting == 'pinyin':
+        return sorted(input_characters, key=pinyin_sortable)
+    else:
+        raise ValueError('Unknown sort mode: %r' % sorting)
+
+
 def draw(input_characters, size, num_repeats, action):
 
     LOGGER.info('Generating SVG...')
@@ -404,16 +435,31 @@ def draw(input_characters, size, num_repeats, action):
 
 @app.route('/gen_strokes', methods=['POST'])
 def gen_strokes():
-    size = int(request.form.get('size') or 10)
-    num_repetitions = int(request.form.get('nr') or 3)
 
-    if 'chars' not in request.form:
+    form_d = dict(request.form)
+
+    size = int(form_d.pop('size', [10])[0])
+    num_repetitions = int(form_d.pop('nr', [1])[0])
+
+    if 'chars' not in form_d:
         resp_kwargs = {'status': 400, 'mimetype': 'text/html'}
         return Response('<h1>Missing "chars" argument.</h1>', **resp_kwargs)
-    C = request.form['chars']
+    C = form_d.pop('chars')[0]
     C = ''.join(C.split())  # strip all whitespace
 
-    action = request.form.get('action') or 'preview'
+    action = form_d.pop('action', ['preview'])[0]
+    sort_mode = form_d.pop('sorting', ['none'])[0]
+
+    if form_d:
+        kwargs = {'status': 400, 'mimetype': 'text/html'}
+        return Response('<h1>Unexpected form data: %r</h1>' % form_d, **kwargs)
+
+    try:
+        C = sort_input(C, sort_mode)
+    except ValueError:
+        kwargs = {'status': 400, 'mimetype': 'text/html'}
+        return Response('<h1>Unexpected sorting: %r</h1>' % sort_mode, **kw)
+
     try:
         resp_args, resp_kwargs = draw(C, size, num_repetitions, action)
     except KeyError as e:
@@ -432,6 +478,11 @@ def index():
         <p>Number of repetitions. 0 means "no repetitions"; useful if you're
             just trying to quickly get familiar with many characters:
             <input type="text" name="nr" value="1"/></p>
+        <p>Sorting:
+            <br><input type="radio" name="sorting" value="none">None</input>
+            <br><input type="radio" name="sorting"
+                value="pinyin">Pinyin</input>
+        </p>
         <button type="submit" value="generate"
             name="action">Generate (PDF, slow)</button>
         <button type="submit" value="preview_small"
