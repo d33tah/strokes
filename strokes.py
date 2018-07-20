@@ -124,13 +124,13 @@ class Tile:
 
     FOOTER = '''</g></svg></svg>'''
 
-    def __init__(self, C, chunk, strokes, img_num, skip_strokes, stop_at,
+    def __init__(self, C, chunk, strokes, highlight_until, skip_strokes, stop_at,
                  add_pinyin=True, skip_in_header=False):
 
         self.C = C
         self.chunk = chunk
         self.strokes = strokes
-        self.img_num = img_num
+        self.highlight_until = highlight_until
         self.skip_strokes = skip_strokes
         self.stop_at = stop_at
         self.add_pinyin = add_pinyin
@@ -167,7 +167,7 @@ class Tile:
                     continue
                 # IMHO this can safely be hardcoded because it's relative
                 # to this image
-                line_size = (20 if n - 1 < self.img_num else 10)
+                line_size = (20 if n - 1 < self.highlight_until else 10)
                 f.write(self.PATH_TPL % (stroke, line_size))
             f.write(self.FOOTER)
             return f.getvalue()
