@@ -125,8 +125,8 @@ class Tile:
 
     FOOTER = '''</g></svg></svg>'''
 
-    def __init__(self, C, chunk, strokes, highlight_until, skip_strokes, stop_at,
-                 add_pinyin=True, skip_in_header=False):
+    def __init__(self, C, chunk, strokes, highlight_until, skip_strokes,
+                 stop_at, add_pinyin=True, skip_in_header=False):
 
         self.C = C
         self.chunk = chunk
