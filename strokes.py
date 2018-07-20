@@ -457,7 +457,7 @@ def gen_strokes():
     try:
         C = sort_input(C, sort_mode)
     except ValueError:
-        kwargs = {'status': 400, 'mimetype': 'text/html'}
+        kw = {'status': 400, 'mimetype': 'text/html'}
         return Response('<h1>Unexpected sorting: %r</h1>' % sort_mode, **kw)
 
     try:
