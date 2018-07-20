@@ -423,7 +423,10 @@ def pinyin_sortable(chinese_character):
     return ''.join(ret) + ''.join(tones)
 
 
-def sort_input(input_characters, sorting):
+def sort_input(input_characters, sorting, nodupes):
+    if nodupes:
+        ordereddict = collections.OrderedDict.fromkeys(input_characters)
+        input_characters = ''.join(ordereddict)
     if sorting == 'none':
         return input_characters
     elif sorting == 'pinyin':
@@ -465,13 +468,14 @@ def gen_strokes():
 
     action = form_d.pop('action', ['preview'])[0]
     sort_mode = form_d.pop('sorting', ['none'])[0]
+    nodupes = form_d.pop('nodupes', [False])[0]
 
     if form_d:
         kwargs = {'status': 400, 'mimetype': 'text/html'}
         return Response('<h1>Unexpected form data: %r</h1>' % form_d, **kwargs)
 
     try:
-        C = sort_input(C, sort_mode)
+        C = sort_input(C, sort_mode, nodupes)
     except ValueError:
         kw = {'status': 400, 'mimetype': 'text/html'}
         return Response('<h1>Unexpected sorting: %r</h1>' % sort_mode, **kw)
@@ -498,6 +502,8 @@ def index():
             <br><input type="radio" name="sorting" value="none">None</input>
             <br><input type="radio" name="sorting"
                 value="pinyin">Pinyin</input>
+            <br><input type="checkbox" name="nodupes" value="true"> Remove
+            duplicates
         </p>
         <button type="submit" value="generate"
             name="action">Generate (PDF, slow)</button>
