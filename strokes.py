@@ -183,20 +183,19 @@ def grouper(l, n):
 
     https://codegolf.stackexchange.com/q/168965/17159
     """
+    (u, v) = (1, 1)
+    c = 0
     while True:
         try:
-            (u, v) = (1, 1)
-            c = 0
-            for i in range(100):
-                if v == 1:
-                    yield l[c]
-                    c += 1
-                else:
-                    yield ''.join(l[c-v:c])
-                A = u & -u == v
-                B = (u + 1, 1)
-                C = (u, 2 * v)
-                (u, v) = B if A else C
+            if v == 1:
+                yield l[c]
+                c += 1
+            else:
+                yield ''.join(l[c-v:c])
+            A = u & -u == v
+            B = (u + 1, 1)
+            C = (u, 2 * v)
+            (u, v) = B if A else C
         except IndexError:
             break
 
