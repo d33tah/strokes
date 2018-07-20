@@ -173,7 +173,7 @@ class Tile:
             return f.getvalue()
 
 
-def grouper(l, n):
+def grouper(l):
     """
     Generate an iterator that works like this:
 
@@ -208,18 +208,11 @@ def gen_images(input_characters, num_repeats):
     the end, we optionally randomly ask the user to write those based on
     pinyin."""
 
-    # if we're not really repeating characters, chunks are meaningless
-    if num_repeats == 0:
-        chunk_size = 1
-    else:
-        chunk_size = CHUNK_SIZE
-
-    for chunk_iter in grouper(input_characters, chunk_size):
+    for chunk_iter in grouper(input_characters):
         chunk = list(chunk_iter)
         if len(chunk) > 1:
-            repeats = chunk * num_repeats * 2
-            random.shuffle(repeats)
-            for C in repeats:
+            random.shuffle(chunk)
+            for C in chunk:
                 yield Tile(C, chunk, [], 0, 0, 0, skip_in_header=True)
             continue
 
