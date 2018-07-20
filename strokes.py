@@ -209,7 +209,11 @@ def gen_images(input_characters, num_repeats):
                     # stroke - this is when it's most likely its text won't
                     # overlap at the bottom of the tile
                     add_text = n == 0 and j == 0
-                    yield Tile(C, chunk, strokes, n, 0, n + 1, add_text)
+                    yield Tile(C, chunk, strokes, n, n, n + 1, add_text)
+
+                # draw n-th stroke and all previous ones
+                for _ in range(num_repeats):
+                    yield Tile(C, chunk, strokes, n, 0, n + 1, False)
 
                 # whole character, highlight n-th stroke
                 for _ in range(num_repeats):
