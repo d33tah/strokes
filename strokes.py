@@ -3,7 +3,6 @@
 import base64
 import collections
 import io
-import itertools
 import json
 import logging
 import random
@@ -174,10 +173,32 @@ class Tile:
             return f.getvalue()
 
 
-def grouper(iterable, n):
+def grouper(l, n):
+    """
+    Generate an iterator that works like this:
+
+    ['A', 'B', 'AB', 'C', 'D', 'CD', 'ABCD', 'E', …]
+
+    Solved thanks to my codegolf puzzle:
+
+    https://codegolf.stackexchange.com/q/168965/17159
+    """
     while True:
-        yield itertools.chain([next(iterable)],
-                              itertools.islice(iterable, n-1))
+        try:
+            (u, v) = (1, 1)
+            c = 0
+            for i in range(100):
+                if v == 1:
+                    yield l[c]
+                    c += 1
+                else:
+                    yield ''.join(l[c-v:c])
+                A = u & -u == v
+                B = (u + 1, 1)
+                C = (u, 2 * v)
+                (u, v) = B if A else C
+        except IndexError:
+            break
 
 
 def gen_images(input_characters, num_repeats):
@@ -194,8 +215,16 @@ def gen_images(input_characters, num_repeats):
     else:
         chunk_size = CHUNK_SIZE
 
-    for chunk_iter in grouper(iter(input_characters), chunk_size):
+    for chunk_iter in grouper(input_characters, chunk_size):
         chunk = list(chunk_iter)
+        if len(chunk) > 1:
+            repeats = chunk * num_repeats * 2
+            random.shuffle(repeats)
+            for C in repeats:
+                yield Tile(C, chunk, [], 0, 0, 0, skip_in_header=True)
+            continue
+
+        # else
         for C in chunk:
             strokes = STROKES_DB[C]
             for n in range(len(strokes)):
@@ -223,11 +252,6 @@ def gen_images(input_characters, num_repeats):
                 # draw n-th stroke into context
                 for _ in range(num_repeats):
                     yield Tile(C, chunk, strokes, n, n + 1, 99, False)
-
-        repeats = chunk * num_repeats * 2
-        random.shuffle(repeats)
-        for C in repeats:
-            yield Tile(C, chunk, [], 0, 0, 0, skip_in_header=True)
 
 
 class Header:
