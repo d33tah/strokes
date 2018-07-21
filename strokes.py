@@ -454,10 +454,10 @@ def draw(input_characters, size, num_repeats, action):
     return [body], {'mimetype': 'text/html', 'status': 400}
 
 
-@app.route('/gen_strokes', methods=['POST'])
+@app.route('/gen_strokes')
 def gen_strokes():
 
-    form_d = dict(request.form)
+    form_d = dict(request.args)
 
     size = int(form_d.pop('size', [10])[0])
     num_repetitions = int(form_d.pop('nr', [1])[0])
@@ -493,7 +493,7 @@ def gen_strokes():
 @app.route('/')
 def index():
     return '''<!DOCTYPE HTML><html><body>
-        <form action="/gen_strokes" method="post">
+        <form action="/gen_strokes" method="get">
         <p>Characters: <input type="text" name="chars"
             value="一二三四五六七八"/></p>
         <p>Size: <input type="text" name="size" value="15"/></p>
@@ -553,77 +553,77 @@ class SystemTests(unittest.TestCase):
     def test_fivedigits_smallpreview(self):
         data = {'size': 12, 'nr': 1, 'action': 'preview_small',
                 'chars': '一二三四五'}
-        rv = self.app.post('/gen_strokes', data=data)
+        rv = self.app.get('/gen_strokes', query_string=data)
         self.assertEqual(rv.status, '200 OK')
 
     def test_fivedigits_smallpreview_norepeats(self):
         data = {'size': 12, 'nr': 0, 'action': 'preview_small',
                 'chars': '一二三四五'}
-        rv = self.app.post('/gen_strokes', data=data)
+        rv = self.app.get('/gen_strokes', query_string=data)
         self.assertEqual(rv.status, '200 OK')
 
     def test_fivedigits_bigpreview(self):
         data = {'size': 12, 'nr': 1, 'action': 'preview_large',
                 'chars': '一二三四五'}
-        rv = self.app.post('/gen_strokes', data=data)
+        rv = self.app.get('/gen_strokes', query_string=data)
         self.assertEqual(rv.status, '200 OK')
 
     def test_xiexie_multipage(self):
         data = {'size': 30, 'nr': 10, 'action': 'preview_small',
                 'chars': '谢'}
-        rv = self.app.post('/gen_strokes', data=data)
+        rv = self.app.get('/gen_strokes', query_string=data)
         self.assertEqual(rv.status, '200 OK')
 
     def test_invalid_action_signals_error(self):
         data = {'size': 12, 'nr': 1, 'action': 'invalid',
                 'chars': '一二三四五'}
-        rv = self.app.post('/gen_strokes', data=data)
+        rv = self.app.get('/gen_strokes', query_string=data)
         self.assertNotEqual(rv.status, '200 OK')
 
     def test_multiline_header(self):
         data = {'size': 12, 'nr': 1, 'action': 'preview_small',
                 'chars': '一七三上下不东个中么九习书买了二五些京亮人什'}
-        rv = self.app.post('/gen_strokes', data=data)
+        rv = self.app.get('/gen_strokes', query_string=data)
         self.assertEqual(rv.status, '200 OK')
 
     @unittest.mock.patch.dict(globals(), {'gen_pdf': MINIMAL_PDF_MOCK})
     def test_gen_pdf(self):
         data = {'size': 12, 'nr': 1, 'action': 'generate',
                 'chars': '一二三四五'}
-        rv = self.app.post('/gen_strokes', data=data)
+        rv = self.app.get('/gen_strokes', query_string=data)
         self.assertEqual(rv.status, '200 OK')
 
     def test_sorting_pinyin(self):
         data = {'size': 12, 'nr': 1, 'action': 'preview_small',
                 'chars': '一二三四五', 'sorting': 'pinyin'}
-        rv = self.app.post('/gen_strokes', data=data)
+        rv = self.app.get('/gen_strokes', query_string=data)
         self.assertEqual(rv.status, '200 OK')
 
     def test_nodupes(self):
         data = {'size': 12, 'nr': 1, 'action': 'preview_small',
                 'chars': '一二三四五', 'nodupes': 'true'}
-        rv = self.app.post('/gen_strokes', data=data)
+        rv = self.app.get('/gen_strokes', query_string=data)
         self.assertEqual(rv.status, '200 OK')
 
     def test_nochars(self):
         data = {'size': 12, 'nr': 1, 'action': 'preview_small'}
-        rv = self.app.post('/gen_strokes', data=data)
+        rv = self.app.get('/gen_strokes', query_string=data)
         self.assertNotEqual(rv.status, '200 OK')
 
     def test_unexpected_post(self):
         data = {'size': 12, 'nr': 1, 'chars': '一',
                 'action': 'preview_small', 'wtf': 'yes'}
-        rv = self.app.post('/gen_strokes', data=data)
+        rv = self.app.get('/gen_strokes', query_string=data)
         self.assertNotEqual(rv.status, '200 OK')
 
     def test_unexpected_sorting(self):
         data = {'size': 12, 'nr': 1, 'chars': '一',
                 'action': 'preview_small', 'sorting': '?'}
-        rv = self.app.post('/gen_strokes', data=data)
+        rv = self.app.get('/gen_strokes', query_string=data)
         self.assertNotEqual(rv.status, '200 OK')
 
     def test_unexpected_character(self):
         data = {'size': 12, 'nr': 1, 'chars': 'A',
                 'action': 'preview_small'}
-        rv = self.app.post('/gen_strokes', data=data)
+        rv = self.app.get('/gen_strokes', query_string=data)
         self.assertNotEqual(rv.status, '200 OK')
