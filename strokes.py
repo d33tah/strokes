@@ -416,6 +416,15 @@ def pinyin_sortable(chinese_character):
     return ''.join(ret) + ''.join(tones)
 
 
+class PinyinSortableTest(unittest.TestCase):
+
+    def test_hao3(self):
+        self.assertEqual(pinyin_sortable('好'), 'hao3')
+
+    def test_hao4(self):
+        self.assertEqual(pinyin_sortable('号'), 'hao4')
+
+
 def sort_input(input_characters, sorting, nodupes):
     if nodupes:
         ordereddict = collections.OrderedDict.fromkeys(input_characters)
@@ -583,3 +592,38 @@ class SystemTests(unittest.TestCase):
                 'chars': '一二三四五'}
         rv = self.app.post('/gen_strokes', data=data)
         self.assertEqual(rv.status, '200 OK')
+
+    def test_sorting_pinyin(self):
+        data = {'size': 12, 'nr': 1, 'action': 'preview_small',
+                'chars': '一二三四五', 'sorting': 'pinyin'}
+        rv = self.app.post('/gen_strokes', data=data)
+        self.assertEqual(rv.status, '200 OK')
+
+    def test_nodupes(self):
+        data = {'size': 12, 'nr': 1, 'action': 'preview_small',
+                'chars': '一二三四五', 'nodupes': 'true'}
+        rv = self.app.post('/gen_strokes', data=data)
+        self.assertEqual(rv.status, '200 OK')
+
+    def test_nochars(self):
+        data = {'size': 12, 'nr': 1, 'action': 'preview_small'}
+        rv = self.app.post('/gen_strokes', data=data)
+        self.assertNotEqual(rv.status, '200 OK')
+
+    def test_unexpected_post(self):
+        data = {'size': 12, 'nr': 1, 'chars': '一',
+                'action': 'preview_small', 'wtf': 'yes'}
+        rv = self.app.post('/gen_strokes', data=data)
+        self.assertNotEqual(rv.status, '200 OK')
+
+    def test_unexpected_sorting(self):
+        data = {'size': 12, 'nr': 1, 'chars': '一',
+                'action': 'preview_small', 'sorting': '?'}
+        rv = self.app.post('/gen_strokes', data=data)
+        self.assertNotEqual(rv.status, '200 OK')
+
+    def test_unexpected_character(self):
+        data = {'size': 12, 'nr': 1, 'chars': 'A',
+                'action': 'preview_small'}
+        rv = self.app.post('/gen_strokes', data=data)
+        self.assertNotEqual(rv.status, '200 OK')
