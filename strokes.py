@@ -179,25 +179,18 @@ def grouper(l):
 
     ['A', 'B', 'AB', 'C', 'D', 'CD', 'ABCD', 'E', …]
 
-    Solved thanks to my codegolf puzzle:
+    Solved thanks to this solution to my codegolf puzzle:
 
-    https://codegolf.stackexchange.com/q/168965/17159
+    https://codegolf.stackexchange.com/a/168978/17159
     """
     (u, v) = (1, 1)
-    c = 0
     while True:
-        try:
-            if v == 1:
-                yield l[c]
-                c += 1
-            else:
-                yield ''.join(l[c-v:c])
-            A = u & -u == v
-            B = (u + 1, 1)
-            C = (u, 2 * v)
-            (u, v) = B if A else C
-        except IndexError:
+        to_yield = ''.join(l[u-v:u])
+        if not to_yield:
             break
+        yield to_yield
+        v = u // v % 2 or 2 * v
+        u += 1 // v
 
 
 def gen_images(input_characters, num_repeats):
