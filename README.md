@@ -117,6 +117,42 @@ red" and it wasn't up to my expectations and right now I'm using their green.
 Using anything other than black will mean you will see when you draw outside
 of the borders.
 
+TO-DO list
+==========
+
+In other words, "what's not there and would fit the project's mission"?
+
+First - user experience. I hacked up the form one can see on the index page
+on the quick - it wasn't meant to be pretty. This doesn't mean I don't want it
+to be - it just means that I didn't have time and energy to get there. Also,
+it would be nice if the program reported which page it's currently rendering
+- if you're supposed to wait a minute, you might as well get some progress
+update. Pull Requests fixing this are definitely welcome for all things listed
+in this section!
+
+Other thing that's on my list is print setup customization - at the very least,
+being able to set page size would be of help to folks living in the US where A4
+is not as popular page format. To be honest, I have no idea how the thing would
+work there right now. Being able to set margins would also be nice.
+
+Speaking of customization, when you print enough of those you'll definitely
+want to be able to add a custom header. It's not there yet. Headers can also
+overflow, especially in "zero repeats" mode. Not sure what the solution should
+be.
+
+One should also be able to customize the learning experience mode. My current
+- possibly not best from UX perspective - solution that I have in mind is to
+add "advanced" mode where user would be able to set number of repeats for each
+phase and also maybe set how many strokes at once they want to learn - once
+you know the patterns, I guess you can tell more or less which strokes stroke
+goes after which, but rather need a general tip.
+
+There's also some testing work - including automated testing. Right now I have
+some system tests that are good at catching crashes and inflating test
+coverage, but don't actually verify if output is OK. Making HTML output
+validate would also be nice. And some selenium testing. This all could use some
+love.
+
 How does it work?
 =================
 
