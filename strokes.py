@@ -436,10 +436,8 @@ def sort_input(input_characters, sorting, nodupes):
 
 def draw(input_characters, size, num_repeats, action):
 
-    LOGGER.info('Generating SVG...')
     gen_images_iter = iter(gen_images(input_characters, num_repeats))
     pages = gen_svgs(size, gen_images_iter)
-    LOGGER.error('Generating pdfs...')
 
     if action == 'generate':
         return [gen_pdfs(pages)], {'mimetype': 'application/pdf'}
@@ -456,7 +454,7 @@ def gen_strokes():
 
     form_d = dict(request.args)
 
-    size = int(form_d.pop('size', [10])[0])
+    size = int(form_d.pop('size', [15])[0])
     num_repetitions = int(form_d.pop('nr', [1])[0])
 
     if 'chars' not in form_d:
@@ -498,7 +496,8 @@ def index():
             just trying to quickly get familiar with many characters:
             <input type="text" name="nr" value="1"/></p>
         <p>Sorting:
-            <br><input type="radio" name="sorting" value="none">None</input>
+            <br><input type="radio" name="sorting"
+                value="none" checked>None</input>
             <br><input type="radio" name="sorting"
                 value="pinyin">Pinyin</input>
             <br><input type="checkbox" name="nodupes" value="true"> Remove
