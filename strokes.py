@@ -4,7 +4,6 @@ import base64
 import collections
 import io
 import json
-import logging
 import random
 import unicodedata
 import unittest
@@ -46,7 +45,6 @@ UX:
 Learning:
 
     * repetition mode: show two strokes at once?
-    * group using this pattern: A, B, AB, C, D, CD, ABCD, ...
 
 Testing and refactoring:
 
@@ -62,7 +60,6 @@ app = Flask(__name__)
 
 
 PAGE_SIZE = (200, 300)
-LOGGER = logging.getLogger(__name__)
 CHUNK_SIZE = 4
 LINE_THICK = 30
 
