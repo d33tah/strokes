@@ -4,8 +4,8 @@ Strokes v1.0
 Strokes is a project meant to help you learn Chinese characters.
 
 Currently it allows you to create a printable worksheet that will teach you
-stroke order and Pinyin pronunciation of any of over 9000 supported characters.
-Here's an example of what happens when you enter 一二三四:
+stroke order and Pinyin pronounciation of any of over 9000 supported
+characters. Here's an example of what happens when you enter 一二三四:
 
 ![Strokes - example output](docs/example_defaults_yi_to_si.png?raw=true)
 
@@ -40,6 +40,82 @@ should see the following text in your terminal:
 
 Assuming that this happened, Strokes should be available using your browser.
 Just visit the following URL: http://localhost:5000/
+
+Generating the PDF
+------------------
+
+After visiting the project's URL, you should see a form with a few text
+boxes, as well as buttons. To just use default settings, remove the current
+contents of "Characters" box and enter any characters you want to learn.
+Keep in mind that all whitespace characters (including just "space") will be
+removed and all non-Chinese characters will cause an error.
+
+Once you're done,
+click "Generate PDF" and wait a while. It takes the program about two seconds
+per page in order to prepare a printable file. If you don't want to be waiting
+just to get the same file, press Ctrl+S and save it somewhere.
+
+I suggest you just print first few pages if you're trying Strokes out - you
+might want to fiddle with the following options:
+
+* **Size** - decrease this if you want resulting document to be zoomed out or
+increase if you want more room for your strokes. This really depends on your
+drawing tool - I just an extra-fine Pilot Plumix fountain pen and size of 15
+is optimal for me while practicing for HSK2,
+
+* **Number of repetitions** - you might have different goals and preferred
+styles when using Strokes. The default "1" means that you'll only do each phase
+of learning once per stroke. If you increase it to 2, each phase will be
+repeated, resulting in more practice. You might find it useful when practicing
+one of the more difficult characters. If you set it to 0, you'll only see
+"next stroke with context" phase used - this is what I'd use if I was to
+quickly get familiar with lots of characters but didn't really care about
+getting enough practice.
+
+* **Sorting** - this lets you rearrange characters you entered in "Characters"
+box. Right now there are two options - "None" which won't change the ordering
+and "Pinyin" which will reorder them, sorting them by pronounciation. You can
+also remove duplicates, which will mean that each character will only appear
+once in the set (don't worry, it will still be repeated - just not more than
+other characters).
+
+* **Preview** - if you only want to get a preview of what the program will
+generate, use this button. It will be faster and you will quickly get an idea
+of whether you want to change anything. Keep in mind that this is not meant
+for printing and sizing might be wrong (but number of pages won't).
+
+If you're preparing for HSK, you can just copy a .txt list as program's
+input and jump straight to learning. Example file you can just copy into the
+"Characters" field is this one:
+
+http://data.hskhsk.com/lists/HSK%20Official%202012%20L1.txt
+
+(Change the L1 at the end of the document to L2 or L-some-other-number if
+you're practicing for HSK2 or higher.)
+
+Tricks and tips
+---------------
+
+Give the program a chance even if you find the number of pages it generated
+overwhelming. They are conveniently split into regions, letting you stop
+your practice session quite often.
+
+Experiment. Not only with options, but also with your writing tools. Find some
+way to make learning pleasant. If this means you need a more expensive pen, do
+it. The program's for free, you're not paying for any teacher, you might as
+well consider it an investment.
+
+When choosing the value of "Size" option, keep in mind that things might get
+cluttered once you start entering complex characters. That's why I introduced
+first ("just this stroke") phase of writing a stroke - so that you will notice
+that you're drawing a new one already. It's easy to drift off while practicing
+and this phase is meant to help you go out of the rhythm so you can concentrate
+again.
+
+Consider using ink color other than black. So far I tried Pelikan's "brilliant
+red" and it wasn't up to my expectations and right now I'm using their green.
+Using anything other than black will mean you will see when you draw outside
+of the borders.
 
 Author, license, acknowledgements
 =================================
