@@ -14,8 +14,6 @@ RUN pip3 install -r /tmp/requirements-dev.txt && rm /tmp/requirements-dev.txt
 
 ADD ./strokes.py /tmp/
 ADD ./wiktionary-data.json /tmp/
-ADD ./alt_forms.json /tmp/
-ADD ./all_definitions.json /tmp/
 
 RUN chmod +x /tmp/strokes.py
 WORKDIR /tmp
