@@ -163,7 +163,7 @@ supported characters, with order retained. He then used it in
 program](https://play.google.com/store/apps/details?id=com.id126c0rsxlvjwv18cf44u&hl=en)
 (definitely worth its Google Play price!) which I found really cool, but not
 perfect when learning chinese characters for the first time - at least not for
-me. Instead of hacking Skishore, I decided to write a Flask application that
+me. Instead of hacking Inkstone, I decided to write a Flask application that
 reads graphics.txt and generates tiles with specific strokes hidden and others
 highlighted.
 
