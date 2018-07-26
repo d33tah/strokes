@@ -449,17 +449,32 @@ def draw(input_characters, size, num_repeats, action):
     return [body], {'mimetype': 'text/html', 'status': 400}
 
 
+def ret_error(err):
+        kwargs = {'status': 400, 'mimetype': 'text/html'}
+        return Response('<h1>%s</h1>' % err, **kwargs)
+
+
 @app.route('/gen_strokes')
 def gen_strokes():
 
     form_d = dict(request.args)
 
-    size = int(form_d.pop('size', [15])[0])
-    num_repetitions = int(form_d.pop('nr', [1])[0])
+    size_s = form_d.pop('size', ['15'])[0] or '15'
+    try:
+        size = int(size_s)
+    except ValueError:
+        return ret_error('Invalid tile size: %r (should be a number)' % size_s)
+
+    num_repetitions_s = form_d.pop('nr', ['1'])[0] or '1'
+    try:
+        num_repetitions = int(num_repetitions_s)
+    except ValueError:
+        return ret_error(('Invalid number of repetitions: %r '
+                          '(should be a number)') % size_s)
 
     if 'chars' not in form_d:
         resp_kwargs = {'status': 400, 'mimetype': 'text/html'}
-        return Response('<h1>Missing "chars" argument.</h1>', **resp_kwargs)
+        return Response('No input characters specified.', **resp_kwargs)
     C = form_d.pop('chars')[0]
     C = ''.join(C.split())  # strip all whitespace
 
@@ -468,14 +483,12 @@ def gen_strokes():
     nodupes = form_d.pop('nodupes', [False])[0]
 
     if form_d:
-        kwargs = {'status': 400, 'mimetype': 'text/html'}
-        return Response('<h1>Unexpected form data: %r</h1>' % form_d, **kwargs)
+        return ret_error('Unexpected form data: %r' % form_d)
 
     try:
         C = sort_input(C, sort_mode, nodupes)
     except ValueError:
-        kw = {'status': 400, 'mimetype': 'text/html'}
-        return Response('<h1>Unexpected sorting: %r</h1>' % sort_mode, **kw)
+        return ret_error('Unexpected sorting: %r' % sort_mode)
 
     try:
         resp_args, resp_kwargs = draw(C, size, num_repetitions, action)
