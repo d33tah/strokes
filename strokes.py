@@ -500,7 +500,14 @@ def gen_strokes():
 
 @app.route('/')
 def index():
+    git_version = ''
+    try:
+        with open('commit-id') as f:
+            git_version = '<!-- Current program version: %s -->' % f.read()
+    except FileNotFoundError:
+        pass
     return '''<!DOCTYPE HTML><html><body>
+        %s
         <form action="/gen_strokes" method="get">
         <p>Characters: <input type="text" name="chars"
             value="一二三四五六七八"/></p>
@@ -523,7 +530,7 @@ def index():
         <button type="submit" value="preview_large"
             name="action">Preview (SVG, zoomed in)</button>
     </form>
-    '''
+    ''' % git_version
 
 
 def MINIMAL_PDF_MOCK(*_, **__):

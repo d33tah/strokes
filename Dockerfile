@@ -1,3 +1,7 @@
+FROM alpine/git
+ADD ./.git/ /git
+RUN git -C /git rev-parse HEAD > /tmp/commit-id
+
 FROM alpine:latest as base
 
 RUN apk update && apk add python3
@@ -23,5 +27,7 @@ CMD FLASK_APP=/tmp/strokes.py flask run -h 0.0.0.0
 RUN flake8 strokes.py
 RUN coverage run --source=. --branch -m nose strokes.py
 RUN coverage report
+
+COPY --from=0 /tmp/commit-id /tmp/commit-id
 
 EXPOSE 5000
