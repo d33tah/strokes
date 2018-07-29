@@ -6,28 +6,28 @@ FROM alpine:latest as base
 
 RUN apk update && apk add python3
 
-RUN wget -nv https://github.com/skishore/makemeahanzi/blob/master/graphics.txt?raw=true -O/tmp/graphics.txt
-RUN wget -nv https://github.com/skishore/makemeahanzi/blob/master/dictionary.txt?raw=true -O/tmp/dictionary.txt
+WORKDIR /tmp
 
-ADD ./requirements.txt /tmp
-RUN pip3 install -r /tmp/requirements.txt && rm /tmp/requirements.txt
+RUN wget -nv https://github.com/skishore/makemeahanzi/blob/master/graphics.txt?raw=true -Ographics.txt
+RUN wget -nv https://github.com/skishore/makemeahanzi/blob/master/dictionary.txt?raw=true -Odictionary.txt
+
+ADD ./requirements.txt .
+RUN pip3 install -r requirements.txt
 
 # I could put it in a separate stage, but I couldn't get it to work w/caching.
-ADD ./requirements-dev.txt /tmp
-RUN pip3 install -r /tmp/requirements-dev.txt && rm /tmp/requirements-dev.txt
+ADD ./requirements-dev.txt .
+RUN pip3 install -r requirements-dev.txt
 
-ADD ./strokes.py /tmp/
-ADD ./wiktionary-data.json /tmp/
+ADD ./strokes.py .
+ADD ./wiktionary-data.json .
 
-RUN chmod +x /tmp/strokes.py
-WORKDIR /tmp
-RUN mkdir /tmp/imagecache
-CMD FLASK_APP=/tmp/strokes.py flask run -h 0.0.0.0
+RUN chmod +x strokes.py
+CMD FLASK_APP=strokes.py flask run -h 0.0.0.0
 
 RUN flake8 strokes.py
 RUN coverage run --source=. --branch -m nose strokes.py
 RUN coverage report
 
-COPY --from=0 /tmp/commit-id /tmp/commit-id
+COPY --from=0 /tmp/commit-id commit-id
 
 EXPOSE 5000
