@@ -153,6 +153,54 @@ coverage, but don't actually verify if output is OK. Making HTML output
 validate would also be nice. And some selenium testing. This all could use some
 love.
 
+Why?
+====
+
+Because I don't like the general idea of "repeat it 1000 times to learn".
+
+I don't really know much about the way human learns, but when I was exposed to
+my regular Chinese practice books, I found them so boring I just decided I
+wouldn't exercise at all. And starting from that point, as I realized I'm quite
+a bit behind compared to other students, I started looking for effective ways
+to learn.
+
+I had a couple of goals in mind: first of all, the tool itself cannot be
+boring. First iterations of Strokes only made me repeat all strokes for a given
+character, but I found that A) I'm not really concentrating this way and B)
+that even after repeating the strokes many times, I still can't write them from
+memory and I'm getting proportions wrong. This is when I decided to introduce
+"stroke with no aid" ("4") tiles and when I realized I'm still doing the thing
+quite mechanically, I also added "just this stroke alone" ("1") tiles that are
+supposed to confuse you for a bit so you re-focus on your task.
+
+Most of the application is built around the way I imagine learning works - at
+one point I realized that I'm not really remembering strokes for characters I
+write and I decided to also add "random rehearsing" with only pinyin hints at
+what is expected. Then, "backtracking" was added, where if you learn characters
+ABCDEFGH, you'll first learn and rehearse A and B, then C and D, then A, B, C
+and D, then - separately - E and F, as well as G and H and after that, E, F, G
+and H. So we're learning in pairs, groups of four and once there are two groups
+of four, they're ultimately merged in "ABCDEFGH" step when you rehearse
+everything so far. This repeats even for large sets, so every few characters
+you will get a chance to repeat everything that was already introduced.
+
+I based this on the assumption that short-term and long-term memory need to be
+trained separately - for short-term memory there's just the practice of
+strokes, but in order to remember them after the few minutes, user is asked to
+recall them, which - if done actively (instead of just cheating and looking at
+the previous answers right away) - is done in the "rehearsing" step.
+
+My ultimate goal is to make the tool as effective as possible, so even if you
+don't have time to repeat hundreds of characters thousands times each, you
+still can get a bit with the aid of this application. One of the ideas I hadn't
+explored yet is to also practice fixed phrases, so that a single sentence would
+for example be a whole group. I might fiddle with this in the future.
+
+By the way, if you have an idea of how to improve this piece, let me know! As
+I said, I have no cognitive sciences background so I might miss some seemingly
+trivial changes that would make this project better. Just imagine all the
+man-hours spent learning Chinese characters that we could just spare!
+
 How does it work?
 =================
 
@@ -217,7 +265,10 @@ In order to protect that freedom, you must share any changes you did to the
 program with me, under the same license. For details, read the COPYING.txt
 file attached to the program.
 
-This application uses data from open-source Inkstone application by Skishore.
-For licensing information, consult the following repository:
+This application uses data from open-source Inkstone application by Skishore,
+namely "graphics.txt" and "dictionary.txt" files. For licensing information,
+consult the following repositories:
 
 https://github.com/skishore/inkstone
+
+https://github.com/skishore/makemeahanzi
