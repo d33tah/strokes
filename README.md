@@ -3,10 +3,9 @@ Strokes v1.0
 
 Strokes is a project meant to help you learn Chinese characters.
 
-Currently it allows you to create a printable worksheet that will teach you
-stroke order and Pinyin pronounciation of any of over 9000 supported
-characters. Here's an example of what happens when you enter 一二三四 on
-[the test page](https://strokes.ovh):
+It lets you to create a printable worksheet that will teach you
+stroke order and Pinyin of any of over 9000 supported characters. Here's what
+you get when you enter 一二三四 on [the test page](https://strokes.ovh):
 
 ![Strokes - example output](docs/example_defaults_yi_to_si.png?raw=true)
 
