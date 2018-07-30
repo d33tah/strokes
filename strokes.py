@@ -122,7 +122,8 @@ class Tile:
     FOOTER = '''</g></svg></svg>'''
 
     def __init__(self, C, chunk, strokes, highlight_until, skip_strokes,
-                 stop_at, add_pinyin=True, skip_in_header=False):
+                 stop_at, add_pinyin=True, skip_in_header=False,
+                 add_radical=False):
 
         self.C = C
         self.chunk = chunk
@@ -131,6 +132,7 @@ class Tile:
         self.skip_strokes = skip_strokes
         self.stop_at = stop_at
         self.add_pinyin = add_pinyin
+        self.add_radical = add_radical
         self.skip_in_header = skip_in_header
         self.x = None
         self.y = None
@@ -153,6 +155,8 @@ class Tile:
         else:
             db_entry = PINYIN_DB[self.C]
             add_text = db_entry['pinyin'][0]
+            if self.add_radical:
+                add_text += db_entry['radical']
         add_text_svg = ('''<text x="50" y="950"
             font-size="250px">%s</text>''' % add_text)
         header_args = {'x': self.x, 'y': self.y, 'size': self.size}
@@ -205,9 +209,15 @@ def gen_images(input_characters, num_repeats):
     for chunk_iter in grouper(input_characters):
         chunk = list(chunk_iter)
         if len(chunk) > 1:
+
+            pinyins = [PINYIN_DB[C]['pinyin'][0] for C in chunk]
+            pinyins_repeating = {p for p in pinyins if pinyins.count(p) > 1}
+
             random.shuffle(chunk)
             for C in chunk:
-                yield Tile(C, chunk, [], 0, 0, 0, skip_in_header=True)
+                pinyin = PINYIN_DB[C]['pinyin'][0]
+                yield Tile(C, chunk, [], 0, 0, 0, skip_in_header=True,
+                           add_radical=pinyin in pinyins_repeating)
             continue
 
         # else
