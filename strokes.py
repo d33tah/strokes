@@ -529,20 +529,20 @@ def index():
         shrink-to-fit=no">
 
     <link rel="stylesheet"
-href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css"
+href="https://stackpath.bootstrapcdn.com/bootswatch/4.1.2/cerulean/bootstrap.min.css"
         crossorigin="anonymous">
 
     <title>Strokes - home page</title>
   </head>
   <body>
-    <div class="container">
+    <div class="container bs-component">
     <h1>Strokes</h1>
 
         <p><em>This is a test website of Strokes project. Keep in mind that
         it's running on the cheapest $5 server, so please be gentle ;) For more
         information, click
         <a href="https://github.com/d33tah/strokes/blob/master/README.md"
-            >HERE</a></em></p>
+            >HERE</a>.</em></p>
 
         <form action="/gen_strokes" method="get">
         <p>Characters: <input type="text" name="chars"
@@ -555,29 +555,34 @@ href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css"
 
 
             <fieldset class="form-group">
-            <div class="form-check">
-            <label class="form-check-label"><input type="radio" name="sorting"
+            <div class="custom-control custom-radio">
+            <input id="sorting_none"
+                class="custom-control-input" type="radio" name="sorting"
                 value="none" checked>
-                <span class="label-text">None</span></label>
+            <label class="custom-control-label" for="sorting_none">
+            None</label>
             </div>
 
-            <div class="form-check">
-            <label class="form-check-label"><input type="radio" name="sorting"
-                value="pinyin"><span class="label-text"> Pinyin</span></label>
+            <div class="custom-control custom-radio">
+            <input class="custom-control-input" type="radio" name="sorting"
+                value="pinyin" id="sorting_pinyin">
+            <label class="custom-control-label" for="sorting_pinyin">
+             Pinyin</label>
             </div>
 
-            <div class="form-check">
-            <label class="form-check-label"><input type="checkbox"
-                name="nodupes" value="true">
-            <span class="label-text">Remove duplicates</span></label>
+            <div class="custom-control custom-checkbox">
+            <input class="custom-control-input" type="checkbox"
+                name="nodupes" value="true" id="sorting_nodupes">
+            <label class="custom-control-label" for="sorting_nodupes">
+            Remove duplicates</label>
             </div>
             </fieldset>
 
-        <button type="submit" value="generate"
+        <button class="btn btn-primary" type="submit" value="generate"
             name="action">Generate (PDF, slow)</button>
-        <button type="submit" value="preview_small"
+        <button class="btn btn-primary" type="submit" value="preview_small"
             name="action">Preview (SVG, zoomed out)</button>
-        <button type="submit" value="preview_large"
+        <button class="btn btn-primary" type="submit" value="preview_large"
             name="action">Preview (SVG, zoomed in)</button>
     </form>
     </div>
