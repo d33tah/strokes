@@ -1,6 +1,9 @@
 Strokes v1.0
 ============
 
+**NEWS!** Demo page is launched. To try it out, visit
+[strokes.ovh](https://strokes.ovh).
+
 Strokes is a project meant to help you learn Chinese characters.
 
 Currently it allows you to create a printable worksheet that will teach you
