@@ -523,11 +523,7 @@ def index():
             git_version = '<!-- Current program version: %s -->' % ver_str
     except FileNotFoundError:
         pass
-    return '''
-<!doctype html>
-<html lang="en">
-  <head>
-    %s
+    return '''<!doctype html><html lang="en"><head>%s
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1,
         shrink-to-fit=no">
@@ -536,7 +532,7 @@ def index():
 href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css"
         crossorigin="anonymous">
 
-    <title>Hello, world!</title>
+    <title>Strokes - home page</title>
   </head>
   <body>
     <div class="container">
@@ -549,14 +545,28 @@ href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css"
         <p>Number of repetitions. 0 means "no repetitions"; useful if you're
             just trying to quickly get familiar with many characters:
             <input type="text" name="nr" value="1"/></p>
-        <p>Sorting:
-            <br><input type="radio" name="sorting"
-                value="none" checked>None</input>
-            <br><input type="radio" name="sorting"
-                value="pinyin">Pinyin</input>
-            <br><input type="checkbox" name="nodupes" value="true"> Remove
-            duplicates
-        </p>
+        <h2>Sorting</h2>
+
+
+            <fieldset class="form-group">
+            <div class="form-check">
+            <label class="form-check-label"><input type="radio" name="sorting"
+                value="none" checked>
+                <span class="label-text">None</span></label>
+            </div>
+
+            <div class="form-check">
+            <label class="form-check-label"><input type="radio" name="sorting"
+                value="pinyin"><span class="label-text"> Pinyin</span></label>
+            </div>
+
+            <div class="form-check">
+            <label class="form-check-label"><input type="checkbox"
+                name="nodupes" value="true">
+            <span class="label-text">Remove duplicates</span></label>
+            </div>
+            </fieldset>
+
         <button type="submit" value="generate"
             name="action">Generate (PDF, slow)</button>
         <button type="submit" value="preview_small"
