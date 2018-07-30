@@ -538,6 +538,12 @@ href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css"
     <div class="container">
     <h1>Strokes</h1>
 
+        <p><em>This is a test website of Strokes project. Keep in mind that
+        it's running on the cheapest $5 server, so please be gentle ;) For more
+        information, click
+        <a href="https://github.com/d33tah/strokes/blob/master/README.md"
+            >HERE</a></em></p>
+
         <form action="/gen_strokes" method="get">
         <p>Characters: <input type="text" name="chars"
             value="一二三四五六七八"/></p>
