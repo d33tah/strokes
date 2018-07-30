@@ -69,7 +69,7 @@ def load_strokes_db(graphics_txt_path):
     with open(graphics_txt_path, 'r', encoding='utf8') as f:
         for line in f:
             x = json.loads(line)
-            ret[x['character']] = x['strokes']
+            ret[x['character']] = x
     return ret
 
 
@@ -79,7 +79,7 @@ def load_dictionary(dictionary_txt_path):
         for line in f:
             j = json.loads(line)
             if j['pinyin']:
-                d[j['character']] = j['pinyin'][0]
+                d[j['character']] = j
     return d
 
 
@@ -148,9 +148,13 @@ class Tile:
         if not all([self.size, self.y, self.size]):
             raise RuntimeError("Call set_dimensions first!")
 
-        add_text = PINYIN_DB[self.C] if self.add_pinyin else ''
+        if not self.add_pinyin:
+            add_text = ''
+        else:
+            db_entry = PINYIN_DB[self.C]
+            add_text = db_entry['pinyin'][0]
         add_text_svg = ('''<text x="50" y="950"
-            font-size="300px">%s</text>''' % add_text)
+            font-size="250px">%s</text>''' % add_text)
         header_args = {'x': self.x, 'y': self.y, 'size': self.size}
         preamble_args = {'leftline_width': self.leftline_width,
                          'topline_width': self.topline_width}
@@ -208,7 +212,7 @@ def gen_images(input_characters, num_repeats):
 
         # else
         for C in chunk:
-            strokes = STROKES_DB[C]
+            strokes = STROKES_DB[C]['strokes']
             for n in range(len(strokes)):
 
                 if num_repeats == 0:
@@ -254,7 +258,9 @@ class Header:
         # tspan.
         if len(self.header) > 75 and '<tspan' not in self.header[1:]:
             self.header += '</tspan><tspan x="0" dy="1.2em">'
-        self.header += '%s (%s)' % (C, PINYIN_DB[C])
+        self.header += '%s (%s' % (C, PINYIN_DB[C]['pinyin'][0])
+        self.header += PINYIN_DB[C]['radical']
+        self.header += ')'
 
     def get_text(self, page_drawn):
         return '''<text x="0" y="5" font-size="5px"><tspan x="0" dy="0em"
@@ -394,7 +400,7 @@ def gen_html(pages, small=True):
 
 def pinyin_sortable(chinese_character):
     # FIXME: this is ugly because I was bugfixing it without refactoring
-    pinyin = PINYIN_DB[chinese_character]
+    pinyin = PINYIN_DB[chinese_character]['pinyin'][0]
     accent_to_number = {
         ' WITH MACRON': '1',
         ' WITH ACUTE': '2',
