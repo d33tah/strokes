@@ -6,10 +6,9 @@ FROM alpine:latest as base
 
 RUN apk update && apk add python3
 
-WORKDIR /tmp
+RUN adduser -D strokes && mkdir -p /home/strokes && chown -R strokes /home/strokes
 
-RUN wget -nv https://github.com/skishore/makemeahanzi/blob/master/graphics.txt?raw=true -Ographics.txt
-RUN wget -nv https://github.com/skishore/makemeahanzi/blob/master/dictionary.txt?raw=true -Odictionary.txt
+WORKDIR /tmp
 
 ADD ./requirements.txt .
 RUN pip3 install -r requirements.txt
@@ -18,10 +17,15 @@ RUN pip3 install -r requirements.txt
 ADD ./requirements-dev.txt .
 RUN pip3 install -r requirements-dev.txt
 
+USER strokes
+WORKDIR /home/strokes
+
+RUN wget -nv https://github.com/skishore/makemeahanzi/blob/master/graphics.txt?raw=true -Ographics.txt
+RUN wget -nv https://github.com/skishore/makemeahanzi/blob/master/dictionary.txt?raw=true -Odictionary.txt
+
 ADD ./strokes.py .
 ADD ./wiktionary-data.json .
 
-RUN chmod +x strokes.py
 CMD FLASK_APP=strokes.py flask run -h 0.0.0.0
 
 RUN flake8 strokes.py
