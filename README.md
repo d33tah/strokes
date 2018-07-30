@@ -1,8 +1,8 @@
 Strokes is a project meant to help you learn Chinese characters.
 
-It lets you to create a worksheet that will teach you how to write any of
-thousands of characters. Here's what you get when you enter 一二三四 on
-[the test page](https://strokes.ovh):
+It lets you create a worksheet that will teach you how to write any of
+thousands of supported characters. Here's what you get when you enter 一二三四
+on [the test page](https://strokes.ovh):
 
 ![Strokes - example output](docs/example_defaults_yi_to_si.png?raw=true)
 
