@@ -519,11 +519,29 @@ def index():
     git_version = ''
     try:
         with open('commit-id') as f:
-            git_version = '<!-- Current program version: %s -->' % f.read()
+            ver_str = f.read().strip()
+            git_version = '<!-- Current program version: %s -->' % ver_str
     except FileNotFoundError:
         pass
-    return '''<!DOCTYPE HTML><html><body>
-        %s
+    return '''
+<!doctype html>
+<html lang="en">
+  <head>
+    %s
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1,
+        shrink-to-fit=no">
+
+    <link rel="stylesheet"
+href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css"
+        crossorigin="anonymous">
+
+    <title>Hello, world!</title>
+  </head>
+  <body>
+    <div class="container">
+    <h1>Strokes</h1>
+
         <form action="/gen_strokes" method="get">
         <p>Characters: <input type="text" name="chars"
             value="一二三四五六七八"/></p>
@@ -546,7 +564,10 @@ def index():
         <button type="submit" value="preview_large"
             name="action">Preview (SVG, zoomed in)</button>
     </form>
-    ''' % git_version
+    </div>
+
+  </body>
+</html>''' % git_version
 
 
 def MINIMAL_PDF_MOCK(*_, **__):
