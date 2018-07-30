@@ -1,6 +1,3 @@
-Strokes v1.0
-============
-
 Strokes is a project meant to help you learn Chinese characters.
 
 It lets you to create a worksheet that will teach you how to write any of
