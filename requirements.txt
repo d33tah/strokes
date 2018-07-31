@@ -1,3 +1,6 @@
 flask
 requests
 pypdf2
+WTForms
+flask-bootstrap
+flask_wtf

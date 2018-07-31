@@ -12,7 +12,10 @@ import unittest.mock
 import requests
 
 from PyPDF2 import PdfFileMerger
-from flask import Flask, Response, request
+from flask import Flask, Response, request, render_template
+from flask_wtf import FlaskForm as WtfForm
+import wtforms
+from flask_bootstrap import Bootstrap
 
 __doc__ = '''
 Generates a file that can be used for learning how to write a specific
@@ -57,6 +60,9 @@ Testing and refactoring:
 '''
 
 app = Flask(__name__)
+secret = ''.join([chr(random.randint(ord('A'), ord('Z'))) for x in range(20)])
+app.config['SECRET_KEY'] = secret
+bootstrap = Bootstrap(app)
 
 
 PAGE_SIZE = (200, 300)
@@ -514,14 +520,19 @@ def gen_strokes():
     return Response(*resp_args, **resp_kwargs)
 
 
-@app.route('/')
-def index():
+def get_git_version():
     git_version = ''
     try:
         with open('commit-id') as f:
             git_version = '<!-- Current program version: %s -->' % f.read()
     except FileNotFoundError:
         pass
+    return git_version
+
+
+@app.route('/')
+def index():
+    git_version = get_git_version()
     return '''<!DOCTYPE HTML><html><body>
         %s
         <form action="/gen_strokes" method="get">
@@ -547,6 +558,17 @@ def index():
             name="action">Preview (SVG, zoomed in)</button>
     </form>
     ''' % git_version
+
+
+class IndexForm(WtfForm):
+    characters = wtforms.StringField(
+        'Characters', [wtforms.validators.Length(min=1, max=10240)])
+
+
+@app.route('/index2')
+def index2():
+    form = IndexForm()
+    return render_template('form.j2', form=form)
 
 
 def MINIMAL_PDF_MOCK(*_, **__):
