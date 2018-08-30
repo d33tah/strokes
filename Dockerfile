@@ -30,7 +30,7 @@ CMD FLASK_APP=strokes.py flask run -h 0.0.0.0
 
 RUN flake8 strokes.py
 RUN coverage run --source=. --branch -m nose strokes.py
-RUN coverage report
+RUN coverage xml && grep '<coverage branch-rate="0.9' coverage.xml
 
 COPY --from=0 /tmp/commit-id commit-id
 
