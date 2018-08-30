@@ -475,18 +475,20 @@ def gen_strokes():
 
     form_d = dict(request.args)
 
-    size_s = form_d.pop('size', ['15'])[0] or '15'
+    scale_s = form_d.pop('scale', ['100'])[0] or '100'
     try:
-        size = int(size_s)
+        scale = int(scale_s)
     except ValueError:
-        return ret_error('Invalid tile size: %r (should be a number)' % size_s)
+        err = 'Invalid tile scale: %r (should be a number)' % scale_s
+        return ret_error(err)
+    size = int(15 * scale / 100.0)
 
     num_repetitions_s = form_d.pop('nr', ['1'])[0] or '1'
     try:
         num_repetitions = int(num_repetitions_s)
     except ValueError:
         return ret_error(('Invalid number of repetitions: %r '
-                          '(should be a number)') % size_s)
+                          '(should be a number)') % num_repetitions_s)
 
     if 'chars' not in form_d:
         resp_kwargs = {'status': 400, 'mimetype': 'text/html'}
@@ -547,7 +549,7 @@ href="https://stackpath.bootstrapcdn.com/bootswatch/4.1.2/cerulean/bootstrap.min
         <form action="/gen_strokes" method="get">
         <p>Characters: <input type="text" name="chars"
             value="一二三四五六七八"/></p>
-        <p>Size: <input type="text" name="size" value="15"/></p>
+        <p>Scale (%%): <input type="text" name="scale" value="100"/></p>
         <p>Number of repetitions. 0 means "no repetitions"; useful if you're
             just trying to quickly get familiar with many characters:
             <input type="text" name="nr" value="1"/></p>
@@ -625,79 +627,79 @@ class SystemTests(unittest.TestCase):
         self.assertEqual(rv.status, '200 OK')
 
     def test_fivedigits_smallpreview(self):
-        data = {'size': 12, 'nr': 1, 'action': 'preview_small',
+        data = {'scale': 12, 'nr': 1, 'action': 'preview_small',
                 'chars': '一二三四五'}
         rv = self.app.get('/gen_strokes', query_string=data)
         self.assertEqual(rv.status, '200 OK')
 
     def test_fivedigits_smallpreview_norepeats(self):
-        data = {'size': 12, 'nr': 0, 'action': 'preview_small',
+        data = {'scale': 12, 'nr': 0, 'action': 'preview_small',
                 'chars': '一二三四五'}
         rv = self.app.get('/gen_strokes', query_string=data)
         self.assertEqual(rv.status, '200 OK')
 
     def test_fivedigits_bigpreview(self):
-        data = {'size': 12, 'nr': 1, 'action': 'preview_large',
+        data = {'scale': 12, 'nr': 1, 'action': 'preview_large',
                 'chars': '一二三四五'}
         rv = self.app.get('/gen_strokes', query_string=data)
         self.assertEqual(rv.status, '200 OK')
 
     def test_xiexie_multipage(self):
-        data = {'size': 30, 'nr': 10, 'action': 'preview_small',
+        data = {'scale': 30, 'nr': 10, 'action': 'preview_small',
                 'chars': '谢'}
         rv = self.app.get('/gen_strokes', query_string=data)
         self.assertEqual(rv.status, '200 OK')
 
     def test_invalid_action_signals_error(self):
-        data = {'size': 12, 'nr': 1, 'action': 'invalid',
+        data = {'scale': 12, 'nr': 1, 'action': 'invalid',
                 'chars': '一二三四五'}
         rv = self.app.get('/gen_strokes', query_string=data)
         self.assertNotEqual(rv.status, '200 OK')
 
     def test_multiline_header(self):
-        data = {'size': 12, 'nr': 1, 'action': 'preview_small',
+        data = {'scale': 12, 'nr': 1, 'action': 'preview_small',
                 'chars': '一七三上下不东个中么九习书买了二五些京亮人什'}
         rv = self.app.get('/gen_strokes', query_string=data)
         self.assertEqual(rv.status, '200 OK')
 
     @unittest.mock.patch.dict(globals(), {'gen_pdf': MINIMAL_PDF_MOCK})
     def test_gen_pdf(self):
-        data = {'size': 12, 'nr': 1, 'action': 'generate',
+        data = {'scale': 12, 'nr': 1, 'action': 'generate',
                 'chars': '一二三四五'}
         rv = self.app.get('/gen_strokes', query_string=data)
         self.assertEqual(rv.status, '200 OK')
 
     def test_sorting_pinyin(self):
-        data = {'size': 12, 'nr': 1, 'action': 'preview_small',
+        data = {'scale': 12, 'nr': 1, 'action': 'preview_small',
                 'chars': '一二三四五', 'sorting': 'pinyin'}
         rv = self.app.get('/gen_strokes', query_string=data)
         self.assertEqual(rv.status, '200 OK')
 
     def test_nodupes(self):
-        data = {'size': 12, 'nr': 1, 'action': 'preview_small',
+        data = {'scale': 12, 'nr': 1, 'action': 'preview_small',
                 'chars': '一二三四五', 'nodupes': 'true'}
         rv = self.app.get('/gen_strokes', query_string=data)
         self.assertEqual(rv.status, '200 OK')
 
     def test_nochars(self):
-        data = {'size': 12, 'nr': 1, 'action': 'preview_small'}
+        data = {'scale': 12, 'nr': 1, 'action': 'preview_small'}
         rv = self.app.get('/gen_strokes', query_string=data)
         self.assertNotEqual(rv.status, '200 OK')
 
     def test_unexpected_post(self):
-        data = {'size': 12, 'nr': 1, 'chars': '一',
+        data = {'scale': 12, 'nr': 1, 'chars': '一',
                 'action': 'preview_small', 'wtf': 'yes'}
         rv = self.app.get('/gen_strokes', query_string=data)
         self.assertNotEqual(rv.status, '200 OK')
 
     def test_unexpected_sorting(self):
-        data = {'size': 12, 'nr': 1, 'chars': '一',
+        data = {'scale': 12, 'nr': 1, 'chars': '一',
                 'action': 'preview_small', 'sorting': '?'}
         rv = self.app.get('/gen_strokes', query_string=data)
         self.assertNotEqual(rv.status, '200 OK')
 
     def test_unexpected_character(self):
-        data = {'size': 12, 'nr': 1, 'chars': 'A',
+        data = {'scale': 12, 'nr': 1, 'chars': 'A',
                 'action': 'preview_small'}
         rv = self.app.get('/gen_strokes', query_string=data)
         self.assertNotEqual(rv.status, '200 OK')
