@@ -98,7 +98,7 @@ Tricks and tips
 
 Give the program a chance even if you find the number of pages it generated
 overwhelming. They are conveniently split into regions, letting you stop
-your practice session quite often.
+your practice sessions quite often.
 
 Experiment. Not only with options, but also with your writing tools. Find some
 way to make learning pleasant. If this means you need a more expensive pen, do
