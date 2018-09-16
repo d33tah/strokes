@@ -1,8 +1,27 @@
-{% import "bootstrap/wtf.html" as wtf %}
-<form method="post" action="/{{route}}">
-  <fieldset>
-    {{ wtf.quick_form(form, button_map={'submit':'success'}) }}
-    <input class="btn btn-success" type="submit" value="Submit" />
-    <button type="button" class="btn"><a href="/">Cancel</a></button>
-  </fieldset>
-</form>
+{% extends "bootstrap/base.html" %}
+{% import "hacked_flask_bootstrap_wtf.html" as wtf %}
+
+{% block styles %}
+
+    <link rel="stylesheet"
+href="https://stackpath.bootstrapcdn.com/bootswatch/3.3.7/cerulean/bootstrap.min.css"
+        crossorigin="anonymous">
+
+{% endblock %}
+
+{% block content %}
+<div class="container bs-component">
+
+
+    <h1>Strokes</h1>
+
+    <p><em>This is a test website of Strokes project. Keep in mind that
+    it's running on the cheapest $5 server, so please be gentle ;) For more
+    information, click
+    <a href="https://github.com/d33tah/strokes/blob/master/README.md"
+        >HERE</a>.</em></p>
+
+    {{ wtf.quick_form(form, action='/gen_strokes', method='get') }}
+
+</div>
+{% endblock %}

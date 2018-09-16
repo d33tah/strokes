@@ -262,12 +262,12 @@ class Header:
 
     def __init__(self):
         self.header = ''
-        self.chars_drawn = []
+        self.characters_drawn = []
 
     def observe_char(self, C):
-        if C in self.chars_drawn:
+        if C in self.characters_drawn:
             return
-        self.chars_drawn.append(C)
+        self.characters_drawn.append(C)
         if self.header:
             self.header += ', '
         # header[1:] was chosen so that we don't catch first
@@ -496,13 +496,22 @@ def gen_strokes():
         return ret_error(('Invalid number of repetitions: %r '
                           '(should be a number)') % num_repetitions_s)
 
-    if 'chars' not in form_d:
+    if 'characters' not in form_d:
         resp_kwargs = {'status': 400, 'mimetype': 'text/html'}
         return Response('No input characters specified.', **resp_kwargs)
-    C = form_d.pop('chars')[0]
+    C = form_d.pop('characters')[0]
     C = ''.join(C.split())  # strip all whitespace
 
-    action = form_d.pop('action', ['preview'])[0]
+    if 'generate' in form_d:
+        action = 'generate'
+    elif 'preview_small' in form_d:
+        action = 'preview_small'
+    elif 'preview_large' in form_d:
+        action = 'preview_large'
+    else:
+        return ret_error('Action not specified.')
+    form_d.pop(action)
+
     sort_mode = form_d.pop('sorting', ['none'])[0]
     nodupes = form_d.pop('nodupes', [False])[0]
 
@@ -532,44 +541,37 @@ def get_git_version():
     return git_version
 
 
-@app.route('/')
-def index():
-    git_version = get_git_version()
-    return '''<!DOCTYPE HTML><html><body>
-        %s
-        <form action="/gen_strokes" method="get">
-        <p>Characters: <input type="text" name="chars"
-            value="一二三四五六七八"/></p>
-        <p>Scale (%%): <input type="text" name="scale" value="100"/></p>
-        <p>Number of repetitions. 0 means "no repetitions"; useful if you're
-            just trying to quickly get familiar with many characters:
-            <input type="text" name="nr" value="1"/></p>
-        <p>Sorting:
-            <br><input type="radio" name="sorting"
-                value="none" checked>None</input>
-            <br><input type="radio" name="sorting"
-                value="pinyin">Pinyin</input>
-            <br><input type="checkbox" name="nodupes" value="true"> Remove
-            duplicates
-        </p>
-        <button type="submit" value="generate"
-            name="action">Generate (PDF, slow)</button>
-        <button type="submit" value="preview_small"
-            name="action">Preview (SVG, zoomed out)</button>
-        <button type="submit" value="preview_large"
-            name="action">Preview (SVG, zoomed in)</button>
-    </form>
-    ''' % git_version
-
-
 class IndexForm(WtfForm):
     characters = wtforms.StringField(
-        'Characters', [wtforms.validators.Length(min=1, max=10240)])
+            'Characters',
+            default='一二三四五六七八',
+            validators=[wtforms.validators.Length(min=1, max=10240)])
+    scale = wtforms.IntegerField(
+            'Scale (%)', default=100,
+            validators=[wtforms.validators.Length(min=0)])
+    nr = wtforms.IntegerField(
+            'Number of repetitions. 0 means "no repetitions"'
+            "; useful if you're just trying to quickly get "
+            "familiar with many characters:",
+            default=1,
+            validators=[wtforms.validators.Length(min=0)])
+
+    sorting = wtforms.RadioField(
+            'Sorting', choices=[
+                ('none', 'None'),
+                ('pinyin', 'Pinyin'),
+            ], default='none')
+
+    nodupes = wtforms.BooleanField('Remove duplicates')
+
+    generate = wtforms.SubmitField('Generate (PDF, slow)')
+    preview_small = wtforms.SubmitField('Preview (SVG, zoomed out)')
+    preview_large = wtforms.SubmitField('Preview (SVG, zoomed in)')
 
 
-@app.route('/index2')
-def index2():
-    form = IndexForm()
+@app.route('/')
+def index():
+    form = IndexForm(csrf_enabled=False)
     return render_template('form.j2', form=form)
 
 
@@ -608,78 +610,78 @@ class SystemTests(unittest.TestCase):
 
     def test_fivedigits_smallpreview(self):
         data = {'scale': 12, 'nr': 1, 'action': 'preview_small',
-                'chars': '一二三四五'}
+                'characters': '一二三四五'}
         rv = self.app.get('/gen_strokes', query_string=data)
         self.assertEqual(rv.status, '200 OK')
 
     def test_fivedigits_smallpreview_norepeats(self):
         data = {'scale': 12, 'nr': 0, 'action': 'preview_small',
-                'chars': '一二三四五'}
+                'characters': '一二三四五'}
         rv = self.app.get('/gen_strokes', query_string=data)
         self.assertEqual(rv.status, '200 OK')
 
     def test_fivedigits_bigpreview(self):
         data = {'scale': 12, 'nr': 1, 'action': 'preview_large',
-                'chars': '一二三四五'}
+                'characters': '一二三四五'}
         rv = self.app.get('/gen_strokes', query_string=data)
         self.assertEqual(rv.status, '200 OK')
 
     def test_xiexie_multipage(self):
         data = {'scale': 30, 'nr': 10, 'action': 'preview_small',
-                'chars': '谢'}
+                'characters': '谢'}
         rv = self.app.get('/gen_strokes', query_string=data)
         self.assertEqual(rv.status, '200 OK')
 
     def test_invalid_action_signals_error(self):
         data = {'scale': 12, 'nr': 1, 'action': 'invalid',
-                'chars': '一二三四五'}
+                'characters': '一二三四五'}
         rv = self.app.get('/gen_strokes', query_string=data)
         self.assertNotEqual(rv.status, '200 OK')
 
     def test_multiline_header(self):
         data = {'scale': 12, 'nr': 1, 'action': 'preview_small',
-                'chars': '一七三上下不东个中么九习书买了二五些京亮人什'}
+                'characters': '一七三上下不东个中么九习书买了二五些京亮人什'}
         rv = self.app.get('/gen_strokes', query_string=data)
         self.assertEqual(rv.status, '200 OK')
 
     @unittest.mock.patch.dict(globals(), {'gen_pdf': MINIMAL_PDF_MOCK})
     def test_gen_pdf(self):
         data = {'scale': 12, 'nr': 1, 'action': 'generate',
-                'chars': '一二三四五'}
+                'characters': '一二三四五'}
         rv = self.app.get('/gen_strokes', query_string=data)
         self.assertEqual(rv.status, '200 OK')
 
     def test_sorting_pinyin(self):
         data = {'scale': 12, 'nr': 1, 'action': 'preview_small',
-                'chars': '一二三四五', 'sorting': 'pinyin'}
+                'characters': '一二三四五', 'sorting': 'pinyin'}
         rv = self.app.get('/gen_strokes', query_string=data)
         self.assertEqual(rv.status, '200 OK')
 
     def test_nodupes(self):
         data = {'scale': 12, 'nr': 1, 'action': 'preview_small',
-                'chars': '一二三四五', 'nodupes': 'true'}
+                'characters': '一二三四五', 'nodupes': 'true'}
         rv = self.app.get('/gen_strokes', query_string=data)
         self.assertEqual(rv.status, '200 OK')
 
-    def test_nochars(self):
+    def test_nocharacters(self):
         data = {'scale': 12, 'nr': 1, 'action': 'preview_small'}
         rv = self.app.get('/gen_strokes', query_string=data)
         self.assertNotEqual(rv.status, '200 OK')
 
     def test_unexpected_post(self):
-        data = {'scale': 12, 'nr': 1, 'chars': '一',
+        data = {'scale': 12, 'nr': 1, 'characters': '一',
                 'action': 'preview_small', 'wtf': 'yes'}
         rv = self.app.get('/gen_strokes', query_string=data)
         self.assertNotEqual(rv.status, '200 OK')
 
     def test_unexpected_sorting(self):
-        data = {'scale': 12, 'nr': 1, 'chars': '一',
+        data = {'scale': 12, 'nr': 1, 'characters': '一',
                 'action': 'preview_small', 'sorting': '?'}
         rv = self.app.get('/gen_strokes', query_string=data)
         self.assertNotEqual(rv.status, '200 OK')
 
     def test_unexpected_character(self):
-        data = {'scale': 12, 'nr': 1, 'chars': 'A',
+        data = {'scale': 12, 'nr': 1, 'characters': 'A',
                 'action': 'preview_small'}
         rv = self.app.get('/gen_strokes', query_string=data)
         self.assertNotEqual(rv.status, '200 OK')
