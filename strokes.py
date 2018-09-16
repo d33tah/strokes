@@ -548,13 +548,13 @@ class IndexForm(WtfForm):
             validators=[wtforms.validators.Length(min=1, max=10240)])
     scale = wtforms.IntegerField(
             'Scale (%)', default=100,
-            validators=[wtforms.validators.Length(min=0)])
+            validators=[wtforms.validators.NumberRange(min=0)])
     nr = wtforms.IntegerField(
             'Number of repetitions. 0 means "no repetitions"'
             "; useful if you're just trying to quickly get "
             "familiar with many characters:",
             default=1,
-            validators=[wtforms.validators.Length(min=0)])
+            validators=[wtforms.validators.NumberRange(min=0)])
 
     sorting = wtforms.RadioField(
             'Sorting', choices=[
