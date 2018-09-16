@@ -1,0 +1,8 @@
+{% import "bootstrap/wtf.html" as wtf %}
+<form method="post" action="/{{route}}">
+  <fieldset>
+    {{ wtf.quick_form(form, button_map={'submit':'success'}) }}
+    <input class="btn btn-success" type="submit" value="Submit" />
+    <button type="button" class="btn"><a href="/">Cancel</a></button>
+  </fieldset>
+</form>

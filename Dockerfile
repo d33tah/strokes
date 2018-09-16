@@ -26,6 +26,8 @@ RUN wget -nv https://github.com/skishore/makemeahanzi/blob/master/dictionary.txt
 ADD ./strokes.py .
 ADD ./wiktionary-data.json .
 
+ADD ./templates templates
+
 CMD FLASK_APP=strokes.py flask run -h 0.0.0.0
 
 RUN flake8 strokes.py
