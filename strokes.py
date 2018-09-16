@@ -609,25 +609,25 @@ class SystemTests(unittest.TestCase):
         self.assertEqual(rv.status, '200 OK')
 
     def test_fivedigits_smallpreview(self):
-        data = {'scale': 12, 'nr': 1, 'action': 'preview_small',
+        data = {'scale': 12, 'nr': 1, 'preview_small': 'yes',
                 'characters': '一二三四五'}
         rv = self.app.get('/gen_strokes', query_string=data)
         self.assertEqual(rv.status, '200 OK')
 
     def test_fivedigits_smallpreview_norepeats(self):
-        data = {'scale': 12, 'nr': 0, 'action': 'preview_small',
+        data = {'scale': 12, 'nr': 0, 'preview_small': 'yes',
                 'characters': '一二三四五'}
         rv = self.app.get('/gen_strokes', query_string=data)
         self.assertEqual(rv.status, '200 OK')
 
     def test_fivedigits_bigpreview(self):
-        data = {'scale': 12, 'nr': 1, 'action': 'preview_large',
+        data = {'scale': 12, 'nr': 1, 'preview_large': 'yes',
                 'characters': '一二三四五'}
         rv = self.app.get('/gen_strokes', query_string=data)
         self.assertEqual(rv.status, '200 OK')
 
     def test_xiexie_multipage(self):
-        data = {'scale': 30, 'nr': 10, 'action': 'preview_small',
+        data = {'scale': 30, 'nr': 10, 'preview_small': 'yes',
                 'characters': '谢'}
         rv = self.app.get('/gen_strokes', query_string=data)
         self.assertEqual(rv.status, '200 OK')
@@ -639,49 +639,49 @@ class SystemTests(unittest.TestCase):
         self.assertNotEqual(rv.status, '200 OK')
 
     def test_multiline_header(self):
-        data = {'scale': 12, 'nr': 1, 'action': 'preview_small',
+        data = {'scale': 12, 'nr': 1, 'preview_small': 'yes',
                 'characters': '一七三上下不东个中么九习书买了二五些京亮人什'}
         rv = self.app.get('/gen_strokes', query_string=data)
         self.assertEqual(rv.status, '200 OK')
 
     @unittest.mock.patch.dict(globals(), {'gen_pdf': MINIMAL_PDF_MOCK})
     def test_gen_pdf(self):
-        data = {'scale': 12, 'nr': 1, 'action': 'generate',
+        data = {'scale': 12, 'nr': 1, 'generate': 'yes',
                 'characters': '一二三四五'}
         rv = self.app.get('/gen_strokes', query_string=data)
         self.assertEqual(rv.status, '200 OK')
 
     def test_sorting_pinyin(self):
-        data = {'scale': 12, 'nr': 1, 'action': 'preview_small',
+        data = {'scale': 12, 'nr': 1, 'preview_small': 'yes',
                 'characters': '一二三四五', 'sorting': 'pinyin'}
         rv = self.app.get('/gen_strokes', query_string=data)
         self.assertEqual(rv.status, '200 OK')
 
     def test_nodupes(self):
-        data = {'scale': 12, 'nr': 1, 'action': 'preview_small',
+        data = {'scale': 12, 'nr': 1, 'preview_small': 'yes',
                 'characters': '一二三四五', 'nodupes': 'true'}
         rv = self.app.get('/gen_strokes', query_string=data)
         self.assertEqual(rv.status, '200 OK')
 
     def test_nocharacters(self):
-        data = {'scale': 12, 'nr': 1, 'action': 'preview_small'}
+        data = {'scale': 12, 'nr': 1, 'preview_small': 'yes'}
         rv = self.app.get('/gen_strokes', query_string=data)
         self.assertNotEqual(rv.status, '200 OK')
 
     def test_unexpected_post(self):
         data = {'scale': 12, 'nr': 1, 'characters': '一',
-                'action': 'preview_small', 'wtf': 'yes'}
+                'preview_small': 'yes', 'wtf': 'yes'}
         rv = self.app.get('/gen_strokes', query_string=data)
         self.assertNotEqual(rv.status, '200 OK')
 
     def test_unexpected_sorting(self):
         data = {'scale': 12, 'nr': 1, 'characters': '一',
-                'action': 'preview_small', 'sorting': '?'}
+                'preview_small': 'yes', 'sorting': '?'}
         rv = self.app.get('/gen_strokes', query_string=data)
         self.assertNotEqual(rv.status, '200 OK')
 
     def test_unexpected_character(self):
         data = {'scale': 12, 'nr': 1, 'characters': 'A',
-                'action': 'preview_small'}
+                'preview_small': 'yes'}
         rv = self.app.get('/gen_strokes', query_string=data)
         self.assertNotEqual(rv.status, '200 OK')
