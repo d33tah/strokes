@@ -580,7 +580,7 @@ href="https://stackpath.bootstrapcdn.com/bootswatch/4.1.2/cerulean/bootstrap.min
             <input class="custom-control-input" type="radio" name="sorting"
                 value="random" id="sorting_random">
             <label class="custom-control-label" for="sorting_random">
-             Pinyin</label>
+             Random</label>
             </div>
 
             <div class="custom-control custom-checkbox">
