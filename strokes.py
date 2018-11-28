@@ -447,8 +447,9 @@ def sort_input(input_characters, sorting, nodupes):
     elif sorting == 'pinyin':
         return sorted(input_characters, key=pinyin_sortable)
     elif sorting == 'random':
+        input_characters = list(input_characters)
         random.shuffle(input_characters)
-        return input_characters
+        return ''.join(input_characters)
     else:
         raise ValueError('Unknown sort mode: %r' % sorting)
 
