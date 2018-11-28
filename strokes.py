@@ -572,6 +572,13 @@ href="https://stackpath.bootstrapcdn.com/bootswatch/4.1.2/cerulean/bootstrap.min
              Pinyin</label>
             </div>
 
+            <div class="custom-control custom-radio">
+            <input class="custom-control-input" type="radio" name="sorting"
+                value="random" id="sorting_random">
+            <label class="custom-control-label" for="sorting_random">
+             Pinyin</label>
+            </div>
+
             <div class="custom-control custom-checkbox">
             <input class="custom-control-input" type="checkbox"
                 name="nodupes" value="true" id="sorting_nodupes">
@@ -669,9 +676,15 @@ class SystemTests(unittest.TestCase):
         rv = self.app.get('/gen_strokes', query_string=data)
         self.assertEqual(rv.status, '200 OK')
 
-    def test_sorting_pinyin(self):
+    def test_sorting_pinyin_ok(self):
         data = {'scale': 12, 'nr': 1, 'action': 'preview_small',
                 'chars': '一二三四五', 'sorting': 'pinyin'}
+        rv = self.app.get('/gen_strokes', query_string=data)
+        self.assertEqual(rv.status, '200 OK')
+
+    def test_sorting_random_ok(self):
+        data = {'scale': 12, 'nr': 1, 'action': 'preview_small',
+                'chars': '一二三四五', 'sorting': 'random'}
         rv = self.app.get('/gen_strokes', query_string=data)
         self.assertEqual(rv.status, '200 OK')
 
