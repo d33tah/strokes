@@ -446,6 +446,8 @@ def sort_input(input_characters, sorting, nodupes):
         return input_characters
     elif sorting == 'pinyin':
         return sorted(input_characters, key=pinyin_sortable)
+    elif sorting == 'tones':
+        return sorted(input_characters, key=pinyin_sortable, reverse=True)
     elif sorting == 'random':
         input_characters = list(input_characters)
         random.shuffle(input_characters)
@@ -574,6 +576,13 @@ href="https://stackpath.bootstrapcdn.com/bootswatch/4.1.2/cerulean/bootstrap.min
                 value="pinyin" id="sorting_pinyin">
             <label class="custom-control-label" for="sorting_pinyin">
              Pinyin</label>
+            </div>
+
+            <div class="custom-control custom-radio">
+            <input class="custom-control-input" type="radio" name="sorting"
+                value="tones" id="sorting_tones">
+            <label class="custom-control-label" for="sorting_tones">
+             Tones</label>
             </div>
 
             <div class="custom-control custom-radio">
