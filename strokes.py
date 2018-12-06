@@ -456,7 +456,7 @@ def sort_input(input_characters, sorting, nodupes):
         return sorted(input_characters, key=pinyin_sortable)
     elif sorting == 'tones':
         def reverse_pinyin(c):
-            ret = pinyin_sortable[c]
+            ret = pinyin_sortable(c)
             return ret[-1] + ret[:-1]
         return sorted(input_characters, key=reverse_pinyin)
     elif sorting == 'random':
@@ -709,6 +709,12 @@ class SystemTests(unittest.TestCase):
     def test_sorting_random_ok(self):
         data = {'scale': 12, 'nr': 1, 'action': 'preview_small',
                 'chars': '一二三四五', 'sorting': 'random'}
+        rv = self.app.get('/gen_strokes', query_string=data)
+        self.assertEqual(rv.status, '200 OK')
+
+    def test_sorting_tones_ok(self):
+        data = {'scale': 12, 'nr': 1, 'action': 'preview_small',
+                'chars': '一二三四五', 'sorting': 'tones'}
         rv = self.app.get('/gen_strokes', query_string=data)
         self.assertEqual(rv.status, '200 OK')
 
