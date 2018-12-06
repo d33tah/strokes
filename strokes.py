@@ -456,7 +456,8 @@ def sort_input(input_characters, sorting, nodupes):
         return sorted(input_characters, key=pinyin_sortable)
     elif sorting == 'tones':
         def reverse_pinyin(c):
-            return ''.join(reversed(pinyin_sortable(c)))
+            ret = pinyin_sortable[c]
+            return ret[-1] + ret[:-1]
         return sorted(input_characters, key=reverse_pinyin)
     elif sorting == 'random':
         input_characters = list(input_characters)
