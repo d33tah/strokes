@@ -421,10 +421,18 @@ def pinyin_sortable(chinese_character):
     tones = []
     for c in pinyin:
         n = unicodedata.name(c)
+        found_any_tone = False
         for k, v in accent_to_number.items():
             if k in n:
                 n = n.replace(k, '')
                 tones.append(v)
+                found_any_tone = True
+            if 'WITH DIAERESIS AND CARON' in n:
+                n = n.replace('WITH DIAERESIS AND CARON', 'WITH DIAERESIS')
+                tones.append('3')
+                found_any_tone = True
+        if not found_any_tone:
+            tones.append('0')
         ret.append(unicodedata.lookup(n))
     return ''.join(ret) + ''.join(tones)
 
