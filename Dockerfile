@@ -4,6 +4,8 @@ RUN git -C /git rev-parse HEAD > /tmp/commit-id
 
 FROM alpine:latest as base
 
+ENV HTML2PDF_URL=http://html2pdf:5000
+
 RUN apk update && apk add python3
 
 RUN adduser -D strokes && mkdir -p /home/strokes && chown -R strokes /home/strokes

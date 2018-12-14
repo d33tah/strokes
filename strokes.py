@@ -4,6 +4,7 @@ import base64
 import collections
 import io
 import json
+import os
 import random
 import unicodedata
 import unittest
@@ -370,7 +371,9 @@ def gen_svgs(size, gen_images_iter):
 def gen_pdf(svg_code):
     data_b64 = base64.b64encode(svg_code.encode('utf8')).decode('ascii')
     datauri = 'data:image/svg+xml;base64,' + data_b64
-    resp = requests.post('http://html2pdf:5000/html2pdf', {'url': datauri})
+    htmlpdf_host = os.environ.get('HTML2PDF_URL', 'http://html2pdf:5000')
+    gen_url = '%s/html2pdf' % htmlpdf_host
+    resp = requests.post(gen_url, {'url': datauri})
     return resp.content
 
 
