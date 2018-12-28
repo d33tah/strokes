@@ -309,7 +309,12 @@ class Page:
                 # this page is full, move on to generating another
                 break
 
-            yield row_num, col_num
+            try:
+              tile = next(self.gen_images_iter)
+            except StopIteration:
+              tile = None
+
+            yield row_num, col_num, tile
 
     def maybe_draw_border(self, tile, row_num, col_num):
         if row_num > 0 and (self.tiles_by_pos[row_num - 1][col_num].chunk
@@ -321,12 +326,14 @@ class Page:
 
     def write_tiles(self, f):
 
-        for row_num, col_num in self.gen_positions():
+        for row_num, col_num, tile in self.gen_positions():
+
+            if tile is None:
+              return False
 
             x = row_num * self.tile_size
             y = (col_num + 1) * self.tile_size
 
-            tile = next(self.gen_images_iter)
             self.tiles_by_pos[row_num][col_num] = tile
             tile.set_dimensions(x, y, self.tile_size)
 
@@ -361,10 +368,8 @@ def gen_svgs(size, gen_images_iter):
         page_drawn += 1
         page = Page(page_drawn, size, gen_images_iter)
         pages.append(page)
-        try:
-            page.prepare()
-        except StopIteration:
-            break
+        if not page.prepare():
+          break
     return pages
 
 
