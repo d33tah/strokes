@@ -124,7 +124,7 @@ class Tile:
 
     def __init__(self, C, chunk, strokes, highlight_until, skip_strokes,
                  stop_at, add_pinyin=True, skip_in_header=False,
-                 add_radical=False):
+                 add_radical=False, is_test=False):
 
         self.C = C
         self.chunk = chunk
@@ -140,6 +140,7 @@ class Tile:
         self.size = None
         self.leftline_width = 10
         self.topline_width = 10
+        self.is_test = is_test
 
     def set_dimensions(self, x, y, size):
         self.x = x
@@ -218,7 +219,7 @@ def gen_images(input_characters, num_repeats):
             for C in chunk:
                 pinyin = PINYIN_DB[C]['pinyin'][0]
                 yield Tile(C, chunk, [], 0, 0, 0, skip_in_header=True,
-                           add_radical=pinyin in pinyins_repeating)
+                           add_radical=pinyin in pinyins_repeating, is_test=True)
             continue
 
         # else
@@ -297,24 +298,40 @@ class Page:
 
     def gen_positions(self):
 
-        num_per_row = PAGE_SIZE[0] // self.tile_size
+        num_per_row = 4
+        col_num_add = 0
         num_rows = PAGE_SIZE[1] // self.tile_size
 
-        for i in range(num_per_row * (num_rows - 1)):
+        row_num = 0
+        col_num = 0
 
-            row_num = i % num_per_row
-            col_num = i // num_per_row
+        prev_tile = None
+        tile = None
 
-            if ((i // num_per_row) + 3) > num_rows:
-                # this page is full, move on to generating another
-                break
+        while True:
 
             try:
+              prev_tile = tile
               tile = next(self.gen_images_iter)
+              if prev_tile and tile.is_test != prev_tile.is_test:
+                row_num += 1
+                col_num = 0
             except StopIteration:
               tile = None
 
-            yield row_num, col_num, tile
+            if col_num == 4:
+              col_num = 0
+              row_num += 1
+
+            if row_num > num_rows:
+              row_num = 0
+              col_num_add += 5
+              if col_num_add > 5:
+                break
+
+            yield col_num + col_num_add, row_num, tile
+
+            col_num += 1
 
     def maybe_draw_border(self, tile, row_num, col_num):
         if row_num > 0 and (self.tiles_by_pos[row_num - 1][col_num].chunk
@@ -340,7 +357,7 @@ class Page:
             if not tile.skip_in_header:
                 self.hdr.observe_char(tile.C)
 
-            self.maybe_draw_border(tile, row_num, col_num)
+            #self.maybe_draw_border(tile, row_num, col_num)
 
             f.write(tile.render())
 
@@ -352,7 +369,7 @@ class Page:
 
         self.f.write(self.HEADER_SINGLE)
         try:
-            self.write_tiles(self.f)
+            return self.write_tiles(self.f)
         finally:
             # in the last page, we will get StopIteration. Regardless of it,
             # We need to finalize rendering.
