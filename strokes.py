@@ -63,6 +63,7 @@ app = Flask(__name__)
 PAGE_SIZE = (200, 300)
 CHUNK_SIZE = 4
 LINE_THICK = 30
+LINE_NORMAL = 10
 
 
 def load_strokes_db(graphics_txt_path):
@@ -124,7 +125,7 @@ class Tile:
 
     def __init__(self, C, chunk, strokes, highlight_until, skip_strokes,
                  stop_at, add_pinyin=True, skip_in_header=False,
-                 add_radical=False, is_test=False):
+                 add_radical=False, group_id=None):
 
         self.C = C
         self.chunk = chunk
@@ -138,9 +139,9 @@ class Tile:
         self.x = None
         self.y = None
         self.size = None
-        self.leftline_width = 10
-        self.topline_width = 10
-        self.is_test = is_test
+        self.leftline_width = LINE_NORMAL
+        self.topline_width = LINE_NORMAL
+        self.group_id = group_id
 
     def set_dimensions(self, x, y, size):
         self.x = x
@@ -219,37 +220,43 @@ def gen_images(input_characters, num_repeats):
             for C in chunk:
                 pinyin = PINYIN_DB[C]['pinyin'][0]
                 yield Tile(C, chunk, [], 0, 0, 0, skip_in_header=True,
-                           add_radical=pinyin in pinyins_repeating, is_test=True)
+                           add_radical=pinyin in pinyins_repeating,
+                           group_id=chunk)
             continue
 
-        # else
-        for C in chunk:
-            strokes = STROKES_DB[C]['strokes']
-            for n in range(len(strokes)):
+        # else:
+        C = chunk[0]
+        strokes = STROKES_DB[C]['strokes']
+        for n in range(len(strokes)):
 
-                if num_repeats == 0:
-                    yield Tile(C, chunk, strokes, n, 0, 99, False)
-                    continue
+            if num_repeats == 0:
+                yield Tile(C, chunk, strokes, n, 0, 99, False,
+                           group_id=chunk)
+                continue
 
-                # draw n-th stroke alone
-                for j in range(num_repeats):
-                    # we only want to print pinyin on first repetition of first
-                    # stroke - this is when it's most likely its text won't
-                    # overlap at the bottom of the tile
-                    add_text = n == 0 and j == 0
-                    yield Tile(C, chunk, strokes, n, n, n + 1, add_text)
+            # draw n-th stroke alone
+            for j in range(num_repeats):
+                # we only want to print pinyin on first repetition of first
+                # stroke - this is when it's most likely its text won't
+                # overlap at the bottom of the tile
+                add_text = n == 0 and j == 0
+                yield Tile(C, chunk, strokes, n, n, n + 1, add_text,
+                           group_id=chunk)
 
-                # draw n-th stroke and all previous ones
-                for _ in range(num_repeats):
-                    yield Tile(C, chunk, strokes, n, 0, n + 1, False)
+            # draw n-th stroke and all previous ones
+            for _ in range(num_repeats):
+                yield Tile(C, chunk, strokes, n, 0, n + 1, False,
+                           group_id=chunk)
 
-                # whole character, highlight n-th stroke
-                for _ in range(num_repeats):
-                    yield Tile(C, chunk, strokes, n, 0, 99, False)
+            # whole character, highlight n-th stroke
+            for _ in range(num_repeats):
+                yield Tile(C, chunk, strokes, n, 0, 99, False,
+                           group_id=chunk)
 
-                # draw n-th stroke into context
-                for _ in range(num_repeats):
-                    yield Tile(C, chunk, strokes, n, n + 1, 99, False)
+            # draw n-th stroke into context
+            for _ in range(num_repeats):
+                yield Tile(C, chunk, strokes, n, n + 1, 99, False,
+                           group_id=chunk)
 
 
 class Header:
@@ -297,8 +304,8 @@ class Page:
         self.rendered = ''
 
     def gen_positions(self):
+        # FIXME: this piece of code is ugly and begs for refactoring.
 
-        num_per_row = 4
         col_num_add = 0
         num_rows = PAGE_SIZE[1] // self.tile_size
 
@@ -307,46 +314,49 @@ class Page:
 
         prev_tile = None
         tile = None
+        topline_width = LINE_NORMAL
 
         while True:
 
             try:
-              prev_tile = tile
-              tile = next(self.gen_images_iter)
-              if prev_tile and tile.is_test != prev_tile.is_test:
-                row_num += 1
-                col_num = 0
+                prev_tile = tile
+                tile = next(self.gen_images_iter)
+                if prev_tile and tile.group_id != prev_tile.group_id:
+                    topline_width = LINE_THICK
+                    row_num += 1
+                    col_num = 0
             except StopIteration:
-              tile = None
+                tile = None
 
             if col_num == 4:
-              col_num = 0
-              row_num += 1
+                col_num = 0
+                row_num += 1
 
             if row_num > num_rows:
-              row_num = 0
-              col_num_add += 5
-              if col_num_add > 5:
-                break
+                row_num = 0
+                col_num_add += 5
+                if col_num_add > 5:
+                    break
+
+            if col_num == 0:
+                if tile and prev_tile and tile.group_id != prev_tile.group_id:
+                    topline_width = LINE_THICK
+                else:
+                    topline_width = LINE_NORMAL
+
+            if tile:
+                tile.topline_width = topline_width
 
             yield col_num + col_num_add, row_num, tile
 
             col_num += 1
-
-    def maybe_draw_border(self, tile, row_num, col_num):
-        if row_num > 0 and (self.tiles_by_pos[row_num - 1][col_num].chunk
-                            != tile.chunk):
-            tile.leftline_width = LINE_THICK
-        if col_num > 0 and (self.tiles_by_pos[row_num][col_num - 1].chunk
-                            != tile.chunk):
-            tile.topline_width = LINE_THICK
 
     def write_tiles(self, f):
 
         for row_num, col_num, tile in self.gen_positions():
 
             if tile is None:
-              return False
+                return False
 
             x = row_num * self.tile_size
             y = (col_num + 1) * self.tile_size
@@ -356,8 +366,6 @@ class Page:
 
             if not tile.skip_in_header:
                 self.hdr.observe_char(tile.C)
-
-            #self.maybe_draw_border(tile, row_num, col_num)
 
             f.write(tile.render())
 
@@ -386,7 +394,7 @@ def gen_svgs(size, gen_images_iter):
         page = Page(page_drawn, size, gen_images_iter)
         pages.append(page)
         if not page.prepare():
-          break
+            break
     return pages
 
 
@@ -508,8 +516,8 @@ def draw(input_characters, size, num_repeats, action):
 
 
 def ret_error(err):
-        kwargs = {'status': 400, 'mimetype': 'text/html'}
-        return Response('<h1>%s</h1>' % err, **kwargs)
+    kwargs = {'status': 400, 'mimetype': 'text/html'}
+    return Response('<h1>%s</h1>' % err, **kwargs)
 
 
 @app.route('/gen_strokes')
