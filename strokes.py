@@ -318,25 +318,26 @@ class Page:
 
         while True:
 
+            if col_num == 4:
+                col_num = 0
+                row_num += 1
+
+            if row_num > num_rows - 1:
+                row_num = 0
+                col_num_add += 5
+                if col_num_add > 5:
+                    break
+
             try:
                 prev_tile = tile
                 tile = next(self.gen_images_iter)
                 if prev_tile and tile.group_id != prev_tile.group_id:
                     topline_width = LINE_THICK
+                    # BUG?: this may be at the edge of the page and not render
                     row_num += 1
                     col_num = 0
             except StopIteration:
                 tile = None
-
-            if col_num == 4:
-                col_num = 0
-                row_num += 1
-
-            if row_num > num_rows:
-                row_num = 0
-                col_num_add += 5
-                if col_num_add > 5:
-                    break
 
             if col_num == 0:
                 if tile and prev_tile and tile.group_id != prev_tile.group_id:
