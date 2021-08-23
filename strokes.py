@@ -179,7 +179,7 @@ class Tile:
             return f.getvalue()
 
 
-def grouper(l):
+def grouper(il):
     """
     Generate an iterator that works like this:
 
@@ -191,7 +191,7 @@ def grouper(l):
     """
     (u, v) = (1, 1)
     while True:
-        to_yield = ''.join(l[u-v:u])
+        to_yield = ''.join(il[u-v:u])
         if not to_yield:
             break
         yield to_yield
@@ -486,8 +486,8 @@ def draw(input_characters, size, num_repeats, action):
 
 
 def ret_error(err):
-        kwargs = {'status': 400, 'mimetype': 'text/html'}
-        return Response('<h1>%s</h1>' % err, **kwargs)
+    kwargs = {'status': 400, 'mimetype': 'text/html'}
+    return Response('<h1>%s</h1>' % err, **kwargs)
 
 
 @app.route('/gen_strokes')
@@ -495,7 +495,7 @@ def gen_strokes():
 
     form_d = dict(request.args)
 
-    scale_s = form_d.pop('scale', ['100'])[0] or '100'
+    scale_s = form_d.pop('scale', '100') or '100'
     try:
         scale = int(scale_s)
     except ValueError:
@@ -503,7 +503,7 @@ def gen_strokes():
         return ret_error(err)
     size = int(15 * scale / 100.0)
 
-    num_repetitions_s = form_d.pop('nr', ['1'])[0] or '1'
+    num_repetitions_s = form_d.pop('nr', '1') or '1'
     try:
         num_repetitions = int(num_repetitions_s)
     except ValueError:
@@ -513,12 +513,12 @@ def gen_strokes():
     if 'chars' not in form_d:
         resp_kwargs = {'status': 400, 'mimetype': 'text/html'}
         return Response('No input characters specified.', **resp_kwargs)
-    C = form_d.pop('chars')[0]
+    C = form_d.pop('chars')
     C = ''.join(C.split())  # strip all whitespace
 
-    action = form_d.pop('action', ['preview'])[0]
-    sort_mode = form_d.pop('sorting', ['none'])[0]
-    nodupes = form_d.pop('nodupes', [False])[0]
+    action = form_d.pop('action', 'preview')
+    sort_mode = form_d.pop('sorting', 'none')
+    nodupes = form_d.pop('nodupes', False)
 
     if form_d:
         return ret_error('Unexpected form data: %r' % form_d)

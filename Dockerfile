@@ -2,11 +2,9 @@ FROM alpine/git
 ADD ./.git/ /git
 RUN git -C /git rev-parse HEAD > /tmp/commit-id
 
-FROM alpine:latest as base
+FROM python:3.9-alpine
 
 ENV HTML2PDF_URL=http://html2pdf:5000
-
-RUN apk update && apk add python3
 
 RUN adduser -D strokes && mkdir -p /home/strokes && chown -R strokes /home/strokes
 
@@ -32,7 +30,7 @@ CMD FLASK_APP=strokes.py flask run -h 0.0.0.0
 
 RUN flake8 strokes.py
 RUN coverage run --source=. --branch -m nose strokes.py
-RUN coverage xml && grep '<coverage branch-rate="0.9' coverage.xml
+RUN coverage xml && egrep 'package name="\.".*branch-rate="0.9' coverage.xml
 
 COPY --from=0 /tmp/commit-id commit-id
 
