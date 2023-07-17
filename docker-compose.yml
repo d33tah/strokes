@@ -10,6 +10,8 @@ services:
             - 5000
         ports:
             - "5000:5000"
+        restart: unless-stopped
 
     html2pdf:
         image: d33tah/html2pdf
+        restart: unless-stopped
