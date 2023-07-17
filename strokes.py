@@ -654,6 +654,17 @@ href="https://stackpath.bootstrapcdn.com/bootswatch/4.1.2/cerulean/bootstrap.min
     </form>
     </div>
 
+<footer class="page-footer font-small blue pt-4">
+<div class="container">
+<p>Developed by d33tah, code hosted on
+<a href="https://github.com/d33tah/strokes">Github</a>.
+Graphics taken from <a href="https://github.com/skishore/makemeahanzi/blob/master/COPYING">makemeahanzi</a> project.
+</p>
+Also check <a href="https://tones.strokes.ovh">tones.strokes.ovh</a> - out my tool for learning Chinese tones!
+</div>
+</footer>
+
+
   </body>
 </html>''' % git_version
 
